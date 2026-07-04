@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pandas as pd
 import typer
 from rich.console import Console
 from rich.table import Table
@@ -256,6 +257,174 @@ def list_experiments() -> None:
 def main() -> None:
     """Entry point for ``python -m containeer_optuna.cli``."""
     app()
+
+
+# --- Statistics subcommands (M5) ----------------------------------------
+
+stats_app = typer.Typer(
+    name="stats",
+    help="Statistical analysis: descriptive stats, hypothesis tests, correlation.",
+    no_args_is_help=True,
+    add_completion=False,
+)
+app.add_typer(stats_app, name="stats")
+
+
+def _load_dataset_for_stats(dataset_name: str) -> pd.DataFrame:
+    """Load a dataset as a single DataFrame (features + target if present)."""
+    from ..data import get_dataset
+
+    loaded = get_dataset(dataset_name).load()
+    if isinstance(loaded, tuple):
+        X, y = loaded
+        df = X.copy()
+        df["_target"] = y
+    else:
+        df = loaded.copy()
+    return df
+
+
+@stats_app.command(name="describe")
+def stats_describe(
+    dataset: str = typer.Argument(..., help="Dataset name (e.g. 'iris', 'diabetes')."),
+) -> None:
+    """Print descriptive statistics for every numeric column."""
+    from ..statistics import describe as describe_fn
+
+    df = _load_dataset_for_stats(dataset)
+    table = Table(title=f"Descriptive statistics — {dataset}")
+    table.add_column("column", style="cyan")
+    for stat in ["n", "mean", "std", "min", "q1", "median", "q3", "max", "skew", "kurtosis"]:
+        table.add_column(stat, justify="right")
+
+    for col in df.select_dtypes(include=["number"]).columns:
+        d = describe_fn(df[col].dropna())
+        table.add_row(
+            col,
+            *[
+                f"{d[s]:.3f}"
+                for s in [
+                    "n",
+                    "mean",
+                    "std",
+                    "min",
+                    "q1",
+                    "median",
+                    "q3",
+                    "max",
+                    "skew",
+                    "kurtosis",
+                ]
+            ],
+        )
+    console.print(table)
+
+
+@stats_app.command(name="ttest")
+def stats_ttest(
+    dataset: str = typer.Argument(...),
+    group_by: str = typer.Option("_target", "--group-by", "-g"),
+    feature: str = typer.Option(..., "--feature", "-f", help="Numeric column to test."),
+) -> None:
+    """Two-sample t-test of a feature across two groups."""
+    from ..statistics import two_sample_ttest
+
+    df = _load_dataset_for_stats(dataset)
+    if group_by not in df.columns:
+        console.print(f"[red]Column '{group_by}' not found.[/red]")
+        raise typer.Exit(code=2)
+    groups = df.groupby(group_by)[feature].apply(list)
+    if len(groups) < 2:
+        console.print(f"[red]Need ≥2 groups in '{group_by}'; found {len(groups)}.[/red]")
+        raise typer.Exit(code=2)
+    result = two_sample_ttest(groups.iloc[0], groups.iloc[1])
+    console.print(f"[bold cyan]{result.test_name}[/bold cyan]  ({feature} ~ {group_by})")
+    console.print(f"  statistic: {result.statistic:.4f}")
+    pval = result.pvalue if result.pvalue is not None else 1.0
+    console.print(f"  p-value:   {pval:.6f}")
+    if pval < 0.05:
+        console.print("  [green]Significant at α=0.05 (reject H₀ of equal means).[/green]")
+    else:
+        console.print("  [yellow]Not significant at α=0.05.[/yellow]")
+
+
+@stats_app.command(name="anova")
+def stats_anova(
+    dataset: str = typer.Argument(...),
+    group_by: str = typer.Option("_target", "--group-by", "-g"),
+    feature: str = typer.Option(..., "--feature", "-f"),
+) -> None:
+    """One-way ANOVA of a feature across groups."""
+    from ..statistics import one_way_anova
+
+    df = _load_dataset_for_stats(dataset)
+    groups = list(df.groupby(group_by)[feature].apply(list))
+    if len(groups) < 2:
+        console.print(f"[red]Need ≥2 groups; found {len(groups)}.[/red]")
+        raise typer.Exit(code=2)
+    result = one_way_anova(*groups)
+    console.print(f"[bold cyan]{result.test_name}[/bold cyan]  ({feature} ~ {group_by})")
+    console.print(f"  F-statistic: {result.statistic:.4f}")
+    console.print(f"  p-value:     {result.pvalue:.6f}")
+    console.print(
+        f"  df:          {result.extra.get('df_between')} / {result.extra.get('df_within')}"
+    )
+
+
+@stats_app.command(name="correlation")
+def stats_correlation(
+    dataset: str = typer.Argument(...),
+    method: str = typer.Option("pearson", "--method", "-m", help="pearson|spearman|kendall"),
+    threshold: float = typer.Option(0.5, "--threshold", "-t", help="Min |r| to show."),
+) -> None:
+    """Print the correlation matrix (features with |r| ≥ threshold)."""
+    from ..statistics import correlation_matrix
+
+    df = _load_dataset_for_stats(dataset)
+    corr, pval = correlation_matrix(df, method=method)
+    table = Table(title=f"Correlation matrix ({method}) — {dataset}  |r| ≥ {threshold}")
+    table.add_column("feature A", style="cyan")
+    table.add_column("feature B", style="cyan")
+    table.add_column("r", justify="right")
+    table.add_column("p-value", justify="right")
+
+    cols = corr.columns.tolist()
+    shown = 0
+    for i in range(len(cols)):
+        for j in range(i + 1, len(cols)):
+            r = corr.iloc[i, j]
+            if abs(r) >= threshold:
+                table.add_row(
+                    cols[i],
+                    cols[j],
+                    f"{r:.3f}",
+                    f"{pval.iloc[i, j]:.4f}",
+                )
+                shown += 1
+    if shown == 0:
+        console.print(f"[yellow]No feature pairs with |r| ≥ {threshold}.[/yellow]")
+    else:
+        console.print(table)
+
+
+@stats_app.command(name="normality")
+def stats_normality(
+    dataset: str = typer.Argument(...),
+    feature: str = typer.Option(..., "--feature", "-f"),
+) -> None:
+    """Shapiro-Wilk normality test on a feature."""
+    from ..statistics import shapiro_test
+
+    df = _load_dataset_for_stats(dataset)
+    result = shapiro_test(df[feature].dropna())
+    console.print(f"[bold cyan]{result.test_name}[/bold cyan]  ({feature})")
+    console.print(f"  W-statistic: {result.statistic:.4f}")
+    pval = result.pvalue if result.pvalue is not None else 1.0
+    console.print(f"  p-value:     {pval:.6f}")
+    if pval < 0.05:
+        console.print("  [yellow]Rejects normality at α=0.05 (data is NOT normal).[/yellow]")
+    else:
+        console.print("  [green]Cannot reject normality at α=0.05 (data may be normal).[/green]")
 
 
 if __name__ == "__main__":  # pragma: no cover

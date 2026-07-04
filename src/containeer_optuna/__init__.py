@@ -63,6 +63,22 @@ from .optimization import (
     make_regression_objective,
 )
 from .pipelines import BasePipeline, get_pipeline
+
+# statistics (M5) — key functions only; full set in containeer_optuna.statistics
+from .statistics import (
+    StatResult,
+    chi_square,
+    correlation_matrix,
+    describe,
+    kruskal_wallis,
+    mann_whitney_u,
+    one_way_anova,
+    paired_ttest,
+    pearson_correlation,
+    shapiro_test,
+    spearman_correlation,
+    two_sample_ttest,
+)
 from .utils import (
     ensure_dir,
     get_logger,
@@ -125,4 +141,17 @@ __all__ = [
     "save_json",
     "save_predictions",
     "study_summary",
+    # statistics (M5)
+    "StatResult",
+    "two_sample_ttest",
+    "paired_ttest",
+    "mann_whitney_u",
+    "one_way_anova",
+    "kruskal_wallis",
+    "shapiro_test",
+    "pearson_correlation",
+    "spearman_correlation",
+    "correlation_matrix",
+    "chi_square",
+    "describe",
 ]

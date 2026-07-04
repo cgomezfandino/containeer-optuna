@@ -30,7 +30,7 @@ UMAP, not t-SNE). TruncatedSVD, FactorAnalysis. Visualization utilities.
 
 New task type. LogReg / KNN / SVC / trees. Accuracy, F1, AUC. StratifiedKFold.
 
-## M5 — Statistics (planned)
+## M5 — Statistics ✅ (current release)
 
 statsmodels integration. Hypothesis tests. GLM. ANOVA.
 
