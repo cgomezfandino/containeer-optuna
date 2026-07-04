@@ -96,6 +96,32 @@
 
 **Key hyperparameters:** `alpha`, `max_iter`, `tol`
 
+## `mlp_regressor`
+
+**Multi-Layer Perceptron (PyTorch) for tabular regression.**
+
+**When to use:** When linear models underfit and tree ensembles aren't ideal (e.g. very wide data with complex feature interactions). The DL objective supports epoch pruning — set optimization.pruner: median to cut bad trials early. Requires pip install containeer-optuna[dl].
+
+**Pros:**
+- ✅ Universal approximator — can fit any continuous function given enough neurons and data.
+- ✅ Epoch pruning (trial.report + trial.should_prune) eliminates bad configs early — the main advantage of Optuna for DL.
+- ✅ Configurable architecture (depth, width, dropout, activation).
+- ✅ Works with any regression metric (r2/mse/rmse/mae).
+
+**Cons:**
+- ❌ Requires PyTorch (optional [dl] extra — heavier install).
+- ❌ Many hyperparameters (lr, batch_size, epochs, architecture, dropout) — needs more Optuna trials than sklearn models.
+- ❌ Sensitive to feature scaling (StandardScaler mandatory).
+- ❌ Prone to overfitting on small datasets (use dropout + fewer epochs).
+- ❌ Slower per trial than sklearn models (GPU recommended for large data).
+- ❌ Non-deterministic without a fixed seed (the framework sets random_state).
+
+**Assumptions:** Features scaled; Sufficient data for the architecture size.
+
+**Complexity:** O(epochs * n_samples * max(hidden_sizes)) per trial
+
+**Key hyperparameters:** `hidden_layer_sizes`, `learning_rate`, `epochs`, `batch_size`, `dropout`
+
 ## `ols`
 
 **Ordinary Least Squares — unregularized linear regression.**

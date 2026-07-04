@@ -229,6 +229,76 @@ models:
         type: "categorical"
         choices: ["gini", "entropy"]
 
+  # --- M6: Deep Learning (PyTorch MLP) ----------------------------------
+  # Requires: pip install containeer-optuna[dl]
+  # Set optimization.pruner: median for epoch pruning.
+
+  - name: "mlp_regressor"
+    type: "regression"
+    default_params:
+      hidden_layer_sizes: [128, 64]
+      dropout: 0.1
+      learning_rate: 0.001
+      batch_size: 64
+      epochs: 50
+      activation: "relu"
+    param_space:
+      learning_rate:
+        type: "float"
+        low: 0.0001
+        high: 0.01
+        log: true
+      batch_size:
+        type: "categorical"
+        choices: [32, 64, 128, 256]
+      epochs:
+        type: "int"
+        low: 10
+        high: 200
+      dropout:
+        type: "float"
+        low: 0.0
+        high: 0.5
+      hidden_layer_sizes:
+        type: "categorical"
+        choices: [[64], [128, 64], [256, 128, 64], [512, 256, 128]]
+      activation:
+        type: "categorical"
+        choices: ["relu", "tanh", "elu"]
+
+  - name: "mlp_classifier"
+    type: "classification"
+    default_params:
+      hidden_layer_sizes: [128, 64]
+      dropout: 0.1
+      learning_rate: 0.001
+      batch_size: 64
+      epochs: 50
+      activation: "relu"
+    param_space:
+      learning_rate:
+        type: "float"
+        low: 0.0001
+        high: 0.01
+        log: true
+      batch_size:
+        type: "categorical"
+        choices: [32, 64, 128, 256]
+      epochs:
+        type: "int"
+        low: 10
+        high: 200
+      dropout:
+        type: "float"
+        low: 0.0
+        high: 0.5
+      hidden_layer_sizes:
+        type: "categorical"
+        choices: [[64], [128, 64], [256, 128, 64], [512, 256, 128]]
+      activation:
+        type: "categorical"
+        choices: ["relu", "tanh", "elu"]
+
   - name: "kmeans"
     type: "clustering"
     default_params:

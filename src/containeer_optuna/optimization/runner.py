@@ -25,9 +25,13 @@ from ..utils import get_logger, seed_all, study_summary
 from .objectives import (
     make_classification_objective,
     make_clustering_objective,
+    make_dl_objective,
     make_model_selection_objective,
     make_regression_objective,
 )
+
+# Models that use the PyTorch DL objective (custom training loop + pruning).
+_DL_MODELS = {"mlp_regressor", "mlp_classifier"}
 
 try:
     import optuna
@@ -175,15 +179,22 @@ class OptunaRunner:
     def _build_objective(self) -> Any:
         """Select and build the right objective for the task.
 
-        When ``config.models`` is set (non-empty), dispatch to the
-        model-selection objective regardless of task (it handles regression,
-        classification, and clustering internally). Otherwise, use the
-        single-model objective for the task.
+        Dispatch order:
+        1. DL models (mlp_regressor / mlp_classifier) → DL objective with
+           epoch pruning.
+        2. Model-selection mode (``config.models`` set) → model-selection
+           objective.
+        3. Single-model sklearn objective per task.
         """
         if self.X is None:
             self.load_data()
 
         assert self.X is not None  # for mypy
+
+        # DL models (M6): custom training loop with epoch pruning.
+        if self.config.model in _DL_MODELS:
+            assert self.y is not None, f"{self.config.task} task requires a target column"
+            return make_dl_objective(self.config, self.X, self.y)
 
         # Model-selection mode (M2): search across model families.
         if self.config.models:

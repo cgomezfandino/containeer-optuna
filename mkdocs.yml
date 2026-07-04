@@ -83,6 +83,7 @@ nav:
       - Clustering Pipeline: tutorials/clustering_pipeline.md
       - Levels of Maturity: tutorials/levels_of_maturity.md
       - Statistics: tutorials/statistics_tutorial.md
+      - Deep Learning: tutorials/deep_learning_tutorial.md
   - API Reference:
       - containeer_optuna: api/containeer_optuna.md
       - config: api/config.md
@@ -93,5 +94,6 @@ nav:
       - evaluation: api/evaluation.md
       - utils: api/utils.md
       - statistics: api/statistics.md
+      - dl: api/dl.md
   - Roadmap: roadmap.md
   - Contributing: contributing.md

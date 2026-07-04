@@ -77,6 +77,31 @@
 
 **Key hyperparameters:** `C`, `penalty`, `solver`, `max_iter`
 
+## `mlp_classifier`
+
+**Multi-Layer Perceptron (PyTorch) for tabular classification.**
+
+**When to use:** When linear classifiers underfit and tree ensembles aren't ideal. The DL objective supports epoch pruning. Requires pip install containeer-optuna[dl].
+
+**Pros:**
+- ✅ Captures non-linear class boundaries.
+- ✅ Epoch pruning cuts bad trials early.
+- ✅ Softmax output gives calibrated-ish probabilities.
+- ✅ Works with any classification metric (accuracy/f1/roc_auc).
+
+**Cons:**
+- ❌ Requires PyTorch (optional [dl] extra).
+- ❌ Many hyperparameters — needs more trials than sklearn classifiers.
+- ❌ Sensitive to feature scaling.
+- ❌ Prone to overfitting on small datasets.
+- ❌ Slower per trial than sklearn classifiers.
+
+**Assumptions:** Features scaled; Sufficient data for the architecture size.
+
+**Complexity:** O(epochs * n_samples * max(hidden_sizes)) per trial
+
+**Key hyperparameters:** `hidden_layer_sizes`, `learning_rate`, `epochs`, `batch_size`, `dropout`
+
 ## `svc`
 
 **Support Vector Classifier — max-margin classifier with the kernel trick.**

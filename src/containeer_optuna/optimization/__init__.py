@@ -3,13 +3,14 @@
 Public API:
     OptunaRunner
     make_cv_splitter, make_regression_objective, make_classification_objective,
-    make_clustering_objective, make_model_selection_objective
+    make_clustering_objective, make_model_selection_objective, make_dl_objective
 """
 
 from .objectives import (
     make_classification_objective,
     make_clustering_objective,
     make_cv_splitter,
+    make_dl_objective,
     make_model_selection_objective,
     make_regression_objective,
 )
@@ -22,4 +23,5 @@ __all__ = [
     "make_classification_objective",
     "make_clustering_objective",
     "make_model_selection_objective",
+    "make_dl_objective",
 ]

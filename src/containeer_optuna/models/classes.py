@@ -103,6 +103,23 @@ except ImportError:  # pragma: no cover
     pass
 
 
+# Deep learning models (M6) — PyTorch MLP for tabular data.
+# torch is optional ([dl] extra); entries are None until the lazy import below.
+DL_MODELS: dict[str, type | None] = {
+    "mlp_regressor": None,
+    "mlp_classifier": None,
+}
+
+
+try:
+    from .dl import MLP as _MLP
+
+    DL_MODELS["mlp_regressor"] = _MLP
+    DL_MODELS["mlp_classifier"] = _MLP
+except ImportError:  # pragma: no cover — torch not installed
+    pass
+
+
 # Final merged registry. Values are estimator classes (UMAP filled in lazily
 # above when umap-learn is available; otherwise None).
 MODEL_CLASSES: dict[str, type | None] = {
@@ -111,6 +128,7 @@ MODEL_CLASSES: dict[str, type | None] = {
     **CLUSTERING_MODELS,
     **REDUCER_MODELS,
     **SCALER_MODELS,
+    **DL_MODELS,
 }
 
 

@@ -26,6 +26,7 @@ from __future__ import annotations
 from typing import Any, Callable, Protocol, runtime_checkable
 
 import numpy as np
+import optuna
 from sklearn.model_selection import KFold, ShuffleSplit, StratifiedKFold, cross_validate
 
 from ...config import CVConfig, ExperimentConfig
@@ -395,9 +396,192 @@ def make_model_selection_objective(
     return objective
 
 
+def make_dl_objective(
+    config: ExperimentConfig,
+    X: Any,
+    y: Any,
+) -> Callable[[Any], float]:
+    """Build a deep-learning Optuna objective with epoch pruning.
+
+    This objective bypasses ``cross_validate`` (which is incompatible with a
+    PyTorch training loop + epoch pruning) and instead iterates CV folds
+    manually — mirroring the pattern in :func:`make_clustering_objective`.
+
+    Per trial:
+    1. Sample DL hyperparameters (learning_rate, batch_size, epochs, dropout,
+       hidden_layer_sizes, activation) via ``suggest_params``.
+    2. Build a preprocessing pipeline (scaler → reducer, no final model).
+    3. Per fold: fit_transform on train, transform on test; build a fresh
+       ``MLP`` ``nn.Module``; run a manual epoch loop. After each epoch, call
+       ``trial.report(val_loss, epoch)`` and prune if ``trial.should_prune()``.
+    4. Score the fold's predictions with the configured metric.
+    5. Return the mean CV metric.
+
+    Requires ``pip install containeer-optuna[dl]`` (PyTorch). The experiment
+    YAML should set ``optimization.pruner: median`` (or ``hyperband``) for
+    pruning to actually fire — the default ``NopPruner`` silently disables it.
+
+    Args:
+        config: Experiment config (must reference a DL model: mlp_regressor /
+            mlp_classifier).
+        X: Feature matrix.
+        y: Target vector.
+
+    Returns:
+        A function ``objective(trial) -> float``.
+    """
+    try:
+        import torch
+        from torch import optim
+    except ImportError as e:
+        raise ImportError(
+            "PyTorch is required for DL experiments. "
+            "Install it with: pip install containeer-optuna[dl]"
+        ) from e
+
+    from ...models.dl.mlp import build_mlp_module, get_loss_fn
+    from ...models.registry import suggest_params
+
+    splitter = make_cv_splitter(config.cv)
+    X_arr = np.asarray(X)
+    y_arr = np.asarray(y)
+
+    is_regression = config.task == "regression"
+    if is_regression:
+        from ...evaluation.metrics import get_regression_scorer
+
+        metric_name = config.metric or "r2"
+        scorer, _ = get_regression_scorer(metric_name)
+    else:
+        from ...evaluation.metrics import get_classification_scorer
+
+        metric_name = config.metric or "accuracy"
+        scorer, _ = get_classification_scorer(metric_name)
+
+    # Load the DL model's param_space for sampling.
+    from ...config import load_model_config
+
+    dl_config = load_model_config(config.model)
+
+    # Determine device.
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    def objective(trial: Any) -> float:
+        # Sample hyperparameters.
+        if dl_config.param_space:
+            params = suggest_params(trial, dl_config.param_space, namespace=config.model)
+        else:
+            params = dict(dl_config.default_params)
+
+        hidden_sizes = params.get("hidden_layer_sizes", [128, 64])
+        dropout = float(params.get("dropout", 0.1))
+        lr = float(params.get("learning_rate", 0.001))
+        batch_size = int(params.get("batch_size", 64))
+        epochs = int(params.get("epochs", 50))
+        activation = params.get("activation", "relu")
+
+        # For classification, infer n_classes.
+        if is_regression:
+            output_dim = 1
+        else:
+            output_dim = int(len(np.unique(y_arr)))
+
+        fold_scores: list[float] = []
+
+        for train_idx, test_idx in splitter.split(X_arr, y_arr):
+            X_train, X_test = X_arr[train_idx], X_arr[test_idx]
+            y_train, y_test = y_arr[train_idx], y_arr[test_idx]
+
+            # Preprocessing (scaler → reducer, built inline).
+            # Reuse sklearn transformers directly.
+            from sklearn.preprocessing import StandardScaler
+
+            scaler = StandardScaler()
+            X_train = scaler.fit_transform(X_train)
+            X_test = scaler.transform(X_test)
+
+            # Convert to tensors.
+            X_train_t = torch.FloatTensor(X_train).to(device)
+            X_test_t = torch.FloatTensor(X_test).to(device)
+            if is_regression:
+                y_train_t = torch.FloatTensor(y_train).to(device).unsqueeze(1)
+            else:
+                y_train_t = torch.LongTensor(y_train).to(device)
+
+            # Build a fresh model.
+            model = build_mlp_module(
+                input_dim=X_train.shape[1],
+                hidden_sizes=hidden_sizes,
+                output_dim=output_dim,
+                dropout=dropout,
+                activation=activation,
+                task=config.task,
+            ).to(device)
+            optimizer = optim.Adam(model.parameters(), lr=lr)
+            loss_fn = get_loss_fn(config.task)
+
+            # Epoch loop with pruning.
+            n = X_train_t.shape[0]
+            for epoch in range(epochs):
+                model.train()
+                # Mini-batch training.
+                perm = torch.randperm(n)
+                for start in range(0, n, batch_size):
+                    idx = perm[start : start + batch_size]
+                    batch_x = X_train_t[idx]
+                    batch_y = y_train_t[idx]
+                    optimizer.zero_grad()
+                    out = model(batch_x)
+                    loss = loss_fn(out, batch_y)
+                    loss.backward()
+                    optimizer.step()
+
+                # Validation loss for pruning.
+                model.eval()
+                with torch.no_grad():
+                    val_out = model(X_test_t)
+                    if is_regression:
+                        val_loss = loss_fn(
+                            val_out, torch.FloatTensor(y_test).to(device).unsqueeze(1)
+                        )
+                    else:
+                        val_loss = loss_fn(val_out, torch.LongTensor(y_test).to(device))
+
+                # Report to Optuna for pruning.
+                trial.report(float(val_loss.item()), step=epoch)
+                if trial.should_prune():
+                    raise optuna.TrialPruned()
+
+            # Compute the fold metric on the final model.
+            model.eval()
+            with torch.no_grad():
+                preds = model(X_test_t).cpu().numpy()
+            if is_regression:
+                preds = preds.ravel()
+            else:
+                preds = preds.argmax(axis=1)
+
+            fold_score = (
+                scorer._score_func(y_test, preds)
+                if hasattr(scorer, "_score_func")
+                else float(np.mean(preds == y_test))
+            )
+            fold_scores.append(float(fold_score))
+
+        if not fold_scores:
+            return -1.0
+        mean_score = float(np.mean(fold_scores))
+        trial.set_user_attr(f"mean_{metric_name}", mean_score)
+        return mean_score
+
+    return objective
+
+
 __all__ = [
     "make_cv_splitter",
     "make_regression_objective",
+    "make_classification_objective",
     "make_clustering_objective",
     "make_model_selection_objective",
+    "make_dl_objective",
 ]
