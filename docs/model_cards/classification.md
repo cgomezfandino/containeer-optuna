@@ -1,5 +1,30 @@
 # Classification models
 
+## `cnn_classifier`
+
+**Convolutional Neural Network (PyTorch) for image classification.**
+
+**When to use:** Image classification tasks (MNIST, CIFAR, medical imaging). CNNs exploit spatial locality and translation invariance via convolutions and pooling. Requires pip install containeer-optuna[dl] (includes torchvision for MNIST/CIFAR10).
+
+**Pros:**
+- ✅ State-of-the-art on image classification (within reach of MLPs on structured tabular data, but dominant on images).
+- ✅ Spatial weight sharing → far fewer parameters than equivalent MLP.
+- ✅ Translation-invariant features (conv + pool).
+- ✅ Epoch pruning works (set pruner: median).
+
+**Cons:**
+- ❌ Requires PyTorch + torchvision (heavier install than sklearn models).
+- ❌ Many hyperparameters (conv architecture, kernel size, FC sizes, lr, epochs) — needs more Optuna trials.
+- ❌ Slow per trial on CPU (GPU strongly recommended for real images).
+- ❌ Overkill for tabular data — use RandomForest/GradientBoosting instead.
+- ❌ Data must be 4D (N, C, H, W) — tabular pipelines (StandardScaler + cross_validate) don't apply.
+
+**Assumptions:** Input is image data (NCHW format); Sufficient data for conv filters.
+
+**Complexity:** O(epochs * n_samples * conv_channels * kernel_size^2 * H * W) per trial
+
+**Key hyperparameters:** `conv_channels`, `kernel_size`, `fc_sizes`, `learning_rate`, `epochs`
+
 ## `decision_tree_classifier`
 
 **Non-parametric classifier: recursive binary splits by Gini/entropy.**
@@ -101,6 +126,33 @@
 **Complexity:** O(epochs * n_samples * max(hidden_sizes)) per trial
 
 **Key hyperparameters:** `hidden_layer_sizes`, `learning_rate`, `epochs`, `batch_size`, `dropout`
+
+## `rnn_classifier`
+
+**Recurrent Neural Network (LSTM/GRU, PyTorch) for sequence classification.**
+
+**When to use:** Classification of sequential/time-series data where temporal order matters (sensor data, text at the token level, ECG, stock returns). Supports LSTM and GRU, configurable depth and bidirectional mode. Requires pip install containeer-optuna[dl].
+
+**Pros:**
+- ✅ Captures temporal dependencies that MLPs/CNNs miss.
+- ✅ LSTM/GRU gates handle long-range dependencies and vanishing gradients.
+- ✅ Bidirectional mode captures both past and future context.
+- ✅ Epoch pruning works (set pruner: median).
+- ✅ Flexible: switch between LSTM and GRU via a categorical hyperparameter.
+
+**Cons:**
+- ❌ Requires PyTorch (heavier install).
+- ❌ Sequential forward pass — cannot parallelize across timesteps (slow on CPU).
+- ❌ Many hyperparameters (hidden_size, n_layers, rnn_type, bidirectional, lr, epochs) — needs more Optuna trials.
+- ❌ Prone to overfitting on short sequences.
+- ❌ Data must be 3D (N, seq_len, features) — tabular pipelines don't apply.
+- ❌ Transformer architectures often outperform RNNs on NLP tasks.
+
+**Assumptions:** Input is sequential data (N, seq_len, features); Temporal order is meaningful.
+
+**Complexity:** O(epochs * n_samples * seq_len * hidden_size) per trial
+
+**Key hyperparameters:** `hidden_size`, `n_layers`, `rnn_type`, `bidirectional`, `learning_rate`, `epochs`
 
 ## `svc`
 

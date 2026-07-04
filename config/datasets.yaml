@@ -87,3 +87,12 @@ datasets:
     target_column: "target"
     feature_columns: null
     preprocessing: {}
+
+  # M7 — Image datasets via torchvision (requires [dl] extra).
+  # MNIST: 60000 training images, 1 channel, 28x28 pixels, 10 classes.
+  - name: "mnist"
+    source: "torchvision"
+    torchvision_name: "MNIST"
+    target_column: null
+    feature_columns: null
+    preprocessing: {}

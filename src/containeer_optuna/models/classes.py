@@ -108,6 +108,9 @@ except ImportError:  # pragma: no cover
 DL_MODELS: dict[str, type | None] = {
     "mlp_regressor": None,
     "mlp_classifier": None,
+    # M7 — DL advanced
+    "cnn_classifier": None,
+    "rnn_classifier": None,
 }
 
 
@@ -116,6 +119,8 @@ try:
 
     DL_MODELS["mlp_regressor"] = _MLP
     DL_MODELS["mlp_classifier"] = _MLP
+    DL_MODELS["cnn_classifier"] = _MLP  # stub class — DL objective uses the backend
+    DL_MODELS["rnn_classifier"] = _MLP
 except ImportError:  # pragma: no cover — torch not installed
     pass
 

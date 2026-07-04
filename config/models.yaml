@@ -299,6 +299,86 @@ models:
         type: "categorical"
         choices: ["relu", "tanh", "elu"]
 
+  # --- M7: DL Advanced (CNN + RNN) --------------------------------------
+  # Requires: pip install containeer-optuna[dl] (includes torchvision)
+  # Set optimization.pruner: median for epoch pruning.
+
+  - name: "cnn_classifier"
+    type: "classification"
+    default_params:
+      conv_channels: [32, 64]
+      kernel_size: 3
+      fc_sizes: [128]
+      dropout: 0.1
+      learning_rate: 0.001
+      batch_size: 64
+      epochs: 10
+    param_space:
+      learning_rate:
+        type: "float"
+        low: 0.0001
+        high: 0.01
+        log: true
+      batch_size:
+        type: "categorical"
+        choices: [32, 64, 128]
+      epochs:
+        type: "int"
+        low: 5
+        high: 50
+      dropout:
+        type: "float"
+        low: 0.0
+        high: 0.5
+      conv_channels:
+        type: "categorical"
+        choices: [[16], [32, 64], [32, 64, 128]]
+      kernel_size:
+        type: "categorical"
+        choices: [3, 5]
+      fc_sizes:
+        type: "categorical"
+        choices: [[64], [128], [256, 128]]
+
+  - name: "rnn_classifier"
+    type: "classification"
+    default_params:
+      hidden_size: 64
+      n_layers: 1
+      bidirectional: false
+      rnn_type: "lstm"
+      dropout: 0.1
+      learning_rate: 0.001
+      batch_size: 64
+      epochs: 10
+    param_space:
+      learning_rate:
+        type: "float"
+        low: 0.0001
+        high: 0.01
+        log: true
+      batch_size:
+        type: "categorical"
+        choices: [32, 64, 128]
+      epochs:
+        type: "int"
+        low: 5
+        high: 50
+      dropout:
+        type: "float"
+        low: 0.0
+        high: 0.5
+      hidden_size:
+        type: "categorical"
+        choices: [32, 64, 128, 256]
+      n_layers:
+        type: "int"
+        low: 1
+        high: 3
+      rnn_type:
+        type: "categorical"
+        choices: ["lstm", "gru"]
+
   - name: "kmeans"
     type: "clustering"
     default_params:
