@@ -562,6 +562,111 @@ UMAP_CARD = ModelCard(
 )
 
 
+# --- M3: Dimensionality reduction ---------------------------------------
+
+TSNE_CARD = ModelCard(
+    name="tsne",
+    kind="reducer",
+    summary="t-Distributed Stochastic Neighbor Embedding — non-linear visualization reduction.",
+    when_to_use=(
+        "Visualizing high-dimensional data in 2D/3D via "
+        "``runner.plot_best_embedding()`` (which applies steps manually via "
+        "fit_transform). NOT usable as a YAML reducer in an experiment "
+        "pipeline: sklearn's Pipeline requires intermediate steps to "
+        "implement transform(), which t-SNE lacks."
+    ),
+    pros=[
+        "Reveals local structure and clusters that PCA/linear methods miss.",
+        "Produces visually compelling 2D/3D embeddings.",
+        "init='pca' gives a deterministic, well-conditioned start.",
+        "Available via plot_best_embedding() which bypasses the Pipeline "
+        "transform requirement by applying fit_transform directly.",
+    ],
+    cons=[
+        "NOT usable as a YAML reducer: sklearn Pipeline._validate_steps() "
+        "requires transform() on intermediate steps, which t-SNE lacks. "
+        "Use plot_best_embedding() (manual step application) instead, or use "
+        "PCA / TruncatedSVD / FactorAnalysis as the YAML reducer.",
+        "perplexity must be < n_samples.",
+        "Stochastic: the embedding changes every fit unless random_state is "
+        "fixed (we set random_state=42).",
+        "Slow on large data (O(n^2) standard; O(n log n) with barnes_hut/fft).",
+        "Global distances in the embedding are NOT meaningful — only local neighborhoods.",
+        "n_components is typically 2 or 3 (visualization), not a search space.",
+    ],
+    assumptions=[
+        "Local neighborhoods are the meaningful structure",
+        "n_samples > perplexity",
+        "Used via plot_best_embedding (not as a YAML reducer)",
+    ],
+    complexity="O(n_samples^2) exact; O(n_samples * log n_samples) with barnes_hut",
+    key_hyperparameters=["perplexity", "learning_rate", "n_components", "init"],
+    milestone="M3",
+)
+
+TRUNCATED_SVD_CARD = ModelCard(
+    name="truncated_svd",
+    kind="reducer",
+    summary="Truncated Singular Value Decomposition (LSA) — linear reduction for sparse data.",
+    when_to_use=(
+        "Dimensionality reduction on SPARSE data (TF-IDF, bag-of-words, "
+        "one-hot matrices) where PCA (which centers data) would destroy "
+        "sparsity. Works everywhere PCA does, plus sparse matrices."
+    ),
+    pros=[
+        "Works on sparse matrices (PCA does not — PCA densifies).",
+        "Linear, fast, deterministic, and reversible (has transform).",
+        "Foundational for text/LSA (Latent Semantic Analysis).",
+        "No hyperparameters beyond n_components (easy to tune).",
+        "Works in both regression and clustering pipelines (has transform).",
+    ],
+    cons=[
+        "Linear only — misses non-linear structure (use t-SNE/UMAP for viz).",
+        "Components (topics) are global and can be hard to interpret.",
+        "Variance preservation != class separability.",
+        "Randomized solver is approximate (set random_state for reproducibility).",
+        "Less interpretable variance-explained than PCA on dense data.",
+    ],
+    assumptions=["Linear structure", "Sparse input where relevant", "n_components < min(n, p)"],
+    complexity="O(n_components * n_samples * n_features) with randomized solver",
+    key_hyperparameters=["n_components", "n_iter (randomized solver)"],
+    milestone="M3",
+)
+
+FACTOR_ANALYSIS_CARD = ModelCard(
+    name="factor_analysis",
+    kind="reducer",
+    summary="Factor Analysis — generative latent-variable linear reduction with Gaussian noise.",
+    when_to_use=(
+        "When you believe observed features are driven by a small number of "
+        "latent factors plus feature-specific Gaussian noise. Common in "
+        "psychometrics, survey analysis, and sensor fusion. Works everywhere "
+        "(has transform)."
+    ),
+    pros=[
+        "Generative model — estimates latent factors AND feature-specific "
+        "noise (unlike PCA which assumes isotropic noise).",
+        "Linear, has transform — works in regression and clustering pipelines.",
+        "Produces interpretable factor loadings (feature → factor weights).",
+        "Handles correlated features better than PCA in some settings.",
+    ],
+    cons=[
+        "Assumes Gaussian noise — fails on heavy-tailed or discrete data.",
+        "EM algorithm can converge to local optima (multiple inits help).",
+        "Slower than PCA (iterative EM vs single SVD).",
+        "n_components selection is non-trivial (no clean variance-explained).",
+        "Sensitive to feature scale — needs a scaler.",
+    ],
+    assumptions=[
+        "Observed features are linear combinations of latent factors + Gaussian noise",
+        "Features scaled",
+    ],
+    complexity="O(n_components^3 + n_samples * n_components^2) per EM iteration",
+    key_hyperparameters=["n_components", "max_iter", "svd_method"],
+    milestone="M3",
+)
+
+
 # --- M0: Scalers ---------------------------------------------------------
 
 STANDARD_SCALER_CARD = ModelCard(
@@ -637,6 +742,10 @@ _ALL_CARDS: dict[str, ModelCard] = {
         OPTICS_CARD,
         PCA_CARD,
         UMAP_CARD,
+        # M3 — Dimensionality reduction
+        TSNE_CARD,
+        TRUNCATED_SVD_CARD,
+        FACTOR_ANALYSIS_CARD,
         STANDARD_SCALER_CARD,
         MINMAX_SCALER_CARD,
     ]

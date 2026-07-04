@@ -16,9 +16,10 @@ from sklearn.cluster import (
     KMeans,
     SpectralClustering,
 )
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, FactorAnalysis, TruncatedSVD
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.linear_model import ElasticNet, Lasso, LinearRegression, Ridge
+from sklearn.manifold import TSNE
 from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from sklearn.svm import SVR
@@ -64,10 +65,15 @@ except ImportError:  # pragma: no cover
 
 # Dimensionality reducers -------------------------------------------------
 # UMAP is optional (umap-learn may be absent); the value can be None until
-# the lazy import below succeeds.
+# the lazy import below succeeds. The M3 reducers (t-SNE, TruncatedSVD,
+# FactorAnalysis) are core sklearn and always available.
 REDUCER_MODELS: dict[str, type | None] = {
     "pca": PCA,
     "umap": None,  # populated lazily below — umap-learn is optional at import
+    # M3 — Dimensionality reduction
+    "tsne": TSNE,
+    "truncated_svd": TruncatedSVD,
+    "factor_analysis": FactorAnalysis,
 }
 
 # Scalers -----------------------------------------------------------------

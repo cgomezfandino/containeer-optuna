@@ -226,3 +226,42 @@ def test_hdbscan_graceful_when_unavailable():
         # sklearn >= 1.3: hdbscan is available; just check it instantiates.
         est = get_model("hdbscan")
         assert type(est).__name__ == "HDBSCAN"
+
+
+# --- M3: dimensionality reduction -------------------------------------
+
+
+@pytest.mark.parametrize(
+    "name,cls_name",
+    [
+        ("tsne", "TSNE"),
+        ("truncated_svd", "TruncatedSVD"),
+        ("factor_analysis", "FactorAnalysis"),
+    ],
+)
+def test_m3_reducers_instantiate(name, cls_name):
+    est = get_model(name)
+    assert type(est).__name__ == cls_name
+
+
+def test_tsne_with_sampled_params():
+    # n_components (categorical), perplexity (float), learning_rate (categorical)
+    trial = _FakeTrial([2, 25.0, "auto"])
+    est = get_model("tsne", trial=trial, namespace="tsne")
+    assert est.n_components == 2
+    assert abs(est.perplexity - 25.0) < 1e-6
+    assert est.learning_rate == "auto"
+    # Confirm namespacing.
+    assert trial.calls[0][1] == "tsne_n_components"
+
+
+def test_truncated_svd_with_sampled_params():
+    trial = _FakeTrial([5])
+    est = get_model("truncated_svd", trial=trial, namespace="truncated_svd")
+    assert est.n_components == 5
+
+
+def test_factor_analysis_with_sampled_params():
+    trial = _FakeTrial([3])
+    est = get_model("factor_analysis", trial=trial, namespace="factor_analysis")
+    assert est.n_components == 3

@@ -47,6 +47,8 @@ from .evaluation import (
     clustering_metrics,
     get_model_card,
     get_regression_scorer,
+    plot_embedding_2d,
+    plot_scree,
     regression_metrics,
 )
 from .models import MODEL_CLASSES, BaseModel, get_model, suggest_params
@@ -108,6 +110,8 @@ __all__ = [
     "get_model_card",
     "all_model_cards",
     "card_to_dict",
+    "plot_embedding_2d",
+    "plot_scree",
     # utils
     "seed_all",
     "get_logger",

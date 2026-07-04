@@ -303,3 +303,75 @@ def test_regression_model_selection_e2e(small_regression_data):
     study = runner.run(n_trials=2, show_progress_bar=False)
     assert len(study.trials) == 2
     assert "model_type" in study.best_params
+
+
+# --- M3: reducers + visualization -------------------------------------
+
+
+def test_clustering_with_truncated_svd_reducer(small_clustering_data):
+    """TruncatedSVD (transform-capable) must work as a reducer in clustering."""
+    X = small_clustering_data
+    cfg = _in_memory_cfg(
+        name="clu_svd",
+        task="clustering",
+        dataset="iris",
+        model="kmeans",
+        scaler="standard_scaler",
+        reducer="truncated_svd",
+        optimization=OptimizationConfig(n_trials=2, direction="maximize"),
+    )
+    cfg.cv = CVConfig(strategy="kfold", n_splits=2)
+    runner = OptunaRunner(cfg)
+    runner.X = np.asarray(X)
+    runner.y = None
+    study = runner.run(n_trials=2, show_progress_bar=False)
+    assert len(study.trials) == 2
+    # SVD params namespaced.
+    assert any(k.startswith("truncated_svd_") for k in study.best_params)
+
+
+def test_plot_best_embedding_returns_figure(small_clustering_data):
+    """runner.plot_best_embedding() must produce a matplotlib Figure."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+
+    X = small_clustering_data
+    cfg = _in_memory_cfg(
+        name="clu_plot",
+        task="clustering",
+        dataset="iris",
+        model="kmeans",
+        scaler="standard_scaler",
+        reducer="pca",
+        optimization=OptimizationConfig(n_trials=2, direction="maximize"),
+    )
+    cfg.cv = CVConfig(strategy="kfold", n_splits=2)
+    runner = OptunaRunner(cfg)
+    runner.X = np.asarray(X)
+    runner.y = None
+    runner.run(n_trials=2, show_progress_bar=False)
+    fig = runner.plot_best_embedding()
+    assert type(fig).__name__ == "Figure"
+
+
+def test_plot_best_embedding_requires_clustering(small_regression_data):
+    """plot_best_embedding must refuse regression tasks with a clear error."""
+    X, y = small_regression_data
+    cfg = _in_memory_cfg(
+        name="reg_plot",
+        task="regression",
+        dataset="diabetes",
+        model="ridge",
+        scaler="standard_scaler",
+        reducer="pca",
+        metric="r2",
+        optimization=OptimizationConfig(n_trials=1),
+    )
+    cfg.cv = CVConfig(strategy="shuffle_split", n_splits=2)
+    runner = OptunaRunner(cfg)
+    runner.X = np.asarray(X)
+    runner.y = np.asarray(y)
+    runner.run(n_trials=1, show_progress_bar=False)
+    with pytest.raises(ValueError, match="clustering"):
+        runner.plot_best_embedding()

@@ -120,3 +120,58 @@ def test_m2_model_cards_present():
 def test_m2_cards_marked_m2_milestone():
     for name in ["hdbscan", "agglomerative", "spectral", "birch", "optics"]:
         assert get_model_card(name).milestone == "M2"
+
+
+# --- M3: reducer cards + plotting -------------------------------------
+
+
+def test_m3_model_cards_present():
+    cards = {c.name for c in all_model_cards()}
+    for m in ["tsne", "truncated_svd", "factor_analysis"]:
+        assert m in cards
+
+
+def test_m3_cards_marked_m3_milestone():
+    for name in ["tsne", "truncated_svd", "factor_analysis"]:
+        assert get_model_card(name).milestone == "M3"
+
+
+def test_tsne_card_warns_clustering_only():
+    """The t-SNE card must document the clustering-only (no transform) caveat."""
+    card = get_model_card("tsne")
+    cons_text = " ".join(card.cons).lower()
+    assert "transform" in cons_text or "clustering-only" in cons_text
+
+
+def test_plot_embedding_2d_returns_figure():
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import numpy as np
+
+    from containeer_optuna.evaluation import plot_embedding_2d
+
+    rng = np.random.RandomState(0)
+    X2d = rng.normal(size=(40, 2))
+    labels = np.array([0] * 20 + [1] * 20)
+    fig = plot_embedding_2d(X2d, labels=labels, title="test")
+    assert type(fig).__name__ == "Figure"
+
+
+def test_plot_scree_returns_figure():
+    import matplotlib
+
+    matplotlib.use("Agg")
+    from containeer_optuna.evaluation import plot_scree
+
+    fig = plot_scree([0.5, 0.3, 0.15, 0.05])
+    assert type(fig).__name__ == "Figure"
+
+
+def test_plot_embedding_2d_rejects_non_2d():
+    import numpy as np
+
+    from containeer_optuna.evaluation import plot_embedding_2d
+
+    with pytest.raises(ValueError, match="must be"):
+        plot_embedding_2d(np.zeros((10, 3)))
