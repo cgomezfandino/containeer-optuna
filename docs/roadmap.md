@@ -1,38 +1,49 @@
 # Roadmap
 
 The framework is built incrementally (Agile milestones). Each milestone ships
-a working, tested, documented increment.
+a working, tested, documented increment. M0–M5 are shipped (version 0.6.0);
+27 models, 167 tests, 56 public symbols.
 
-## M0 — Foundation ✅ (this release)
+## M0 — Foundation ✅
 
 Package importable from `src/`, CLI (`containeer-optuna`), YAML-driven
 experiments, regression (Ridge/Lasso/OLS) + clustering (KMeans/DBSCAN/GMM) +
 reducers (PCA/UMAP) + scalers (Standard/MinMax), Optuna integration with
-samplers/pruners, model cards (pros/cons), 57 tests, mkdocs site.
+samplers/pruners, model cards (pros/cons), mkdocs site.
 
-## M1 — Regression maturity ✅ (current release)
+## M1 — Regression maturity ✅
 
 ElasticNet, DecisionTree, RandomForest, GradientBoosting, SVR. Pluggable
-metrics (MSE/MAE/RMSE/MAPE). Optuna feature-set selection. Model-selection-as-
-categorical studies (one study across model families).
+metrics (r2/mse/rmse/mae). Optuna feature-set selection. Model-selection-as-
+categorical studies (one study across model families). Bundled diabetes
+dataset (source: sklearn).
 
-## M2 — Clustering maturity ✅ (current release)
+## M2 — Clustering maturity ✅
 
-HDBSCAN, Agglomerative, Spectral, Birch, OPTICS. Robust noise handling.
-Cluster stability metric.
+HDBSCAN, Agglomerative, Spectral, Birch, OPTICS. Robust noise handling
+(DBSCAN fix — the clustering objective now uses `fit_predict` per fold).
+Model-selection-as-categorical extended to clustering.
 
-## M3 — Dimensionality reduction ✅ (current release)
+## M3 — Dimensionality reduction ✅
 
-t-SNE (real perplexity — the original `perplexity.ipynb` is misnamed; it uses
-UMAP, not t-SNE). TruncatedSVD, FactorAnalysis. Visualization utilities.
+t-SNE, TruncatedSVD, FactorAnalysis. Visualization utilities (`plot_embedding_2d`,
+`plot_scree`, `runner.plot_best_embedding()`). t-SNE documented as
+visualization-only (no `transform()`, cannot be a YAML Pipeline reducer).
 
-## M4 — Classification ✅ (current release)
+## M4 — Classification ✅
 
-New task type. LogReg / KNN / SVC / trees. Accuracy, F1, AUC. StratifiedKFold.
+LogisticRegression, KNN, SVC, DecisionTreeClassifier. Classification metrics
+(accuracy, f1, f1_weighted, roc_auc, roc_auc_ovr). StratifiedKFold default.
+3 bundled classification datasets (breast_cancer, wine, iris_classification).
+Model-selection extended to classification.
 
-## M5 — Statistics ✅ (current release)
+## M5 — Statistics ✅
 
-statsmodels integration. Hypothesis tests. GLM. ANOVA.
+`statistics/` subpackage with hypothesis tests (ttest, Mann-Whitney, ANOVA,
+Kruskal-Wallis), normality (Shapiro, D'Agostino, Anderson-Darling),
+correlation (Pearson, Spearman, Kendall, matrix), chi-square, descriptive
+statistics — all powered by `scipy.stats` (zero new dependencies). Uniform
+`StatResult` return type. `containeer-optuna stats` CLI subcommand group.
 
 ## M6 — Deep Learning foundation (planned)
 
