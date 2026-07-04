@@ -69,6 +69,7 @@ nav:
       - Pipelines: user_guide/pipelines.md
       - Optimization: user_guide/optimization.md
       - Evaluation: user_guide/evaluation.md
+      - Statistics: user_guide/statistics.md
   - Model Cards:
       - Overview: model_cards/index.md
       - Regression: model_cards/regression.md
@@ -81,6 +82,7 @@ nav:
       - Model Selection: tutorials/model_selection.md
       - Clustering Pipeline: tutorials/clustering_pipeline.md
       - Levels of Maturity: tutorials/levels_of_maturity.md
+      - Statistics: tutorials/statistics_tutorial.md
   - API Reference:
       - containeer_optuna: api/containeer_optuna.md
       - config: api/config.md
@@ -90,5 +92,6 @@ nav:
       - optimization: api/optimization.md
       - evaluation: api/evaluation.md
       - utils: api/utils.md
+      - statistics: api/statistics.md
   - Roadmap: roadmap.md
   - Contributing: contributing.md

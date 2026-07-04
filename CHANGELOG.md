@@ -1,33 +1,32 @@
 # Changelog
 
-## [Unreleased] — M4 — Classification
+## [Unreleased] — M5 — Statistics
 
 ### Added
-- **4 classifiers** with industry-aligned hyperparameter ranges + full model
-  cards: logistic_regression, knn, svc, decision_tree_classifier.
-- **Classification metrics**: accuracy, f1, f1_weighted, roc_auc, roc_auc_ovr
-  (all maximize). New `CLASSIFICATION_SCORERS` + `get_classification_scorer`.
-- **`make_classification_objective`**: mirrors the regression objective with
-  classification scorers; supports feature_sets + StratifiedKFold.
-- **Classification model-selection**: the `models: [...]` field now works for
-  classification (searches across LogReg/KNN/SVC/DTClassifier in one study).
-- **3 bundled classification datasets**: breast_cancer (binary, 569×30), wine
-  (3-class, 178×13), iris_classification (3-class, 150×4). No download.
-- **Experiments**: breast_cancer_classification.yaml,
-  classification_model_selection.yaml.
-- **23 new tests** (147 total): classifier instantiation + sampled params,
-  classification scorers, metric→direction, stratified_kfold default,
-  classification e2e (parametrized across the 4 classifiers),
-  classification model-selection e2e.
+- **`statistics/` subpackage** — hypothesis tests, normality tests,
+  correlation, chi-square, and descriptive statistics, all powered by
+  `scipy.stats` (zero new dependencies).
+- **Uniform `StatResult` dataclass** — every test returns
+  `(test_name, statistic, pvalue, extra)` for a consistent interface.
+- **Functions**: two_sample_ttest, paired_ttest, mann_whitney_u,
+  one_way_anova, kruskal_wallis (hypothesis); shapiro_test, dagostino_test,
+  anderson_test (normality); pearson_correlation, spearman_correlation,
+  kendall_correlation, correlation_matrix (correlation); chi_square
+  (categorical); describe (descriptive).
+- **CLI `stats` subcommand group**: `describe`, `ttest`, `anova`,
+  `correlation`, `normality` — for quick exploratory analysis from the
+  terminal.
+- **20 new tests** (167 total): every stats function tested on synthetic
+  data with known expected behavior (significance, correlation strength,
+  normality acceptance/rejection).
 
-### Changed
-- `ExperimentConfig.metric` widened to accept both regression and
-  classification metrics.
-- `ExperimentConfig` validator now defaults `cv.strategy` to
-  `stratified_kfold` for classification (mirrors the clustering→kfold default).
-- `METRIC_DIRECTION` extended with the 5 classification metrics.
-- The model-selection objective now handles classification (cross_validate
-  branch shared with regression).
+### Design note
+Stats are standalone utilities (NOT Optuna objectives and NOT a TaskType).
+They produce p-values/statistics, not values to optimize over trials.
+
+## [0.5.0] — M4 — Classification
+
+4 classifiers, classification metrics, StratifiedKFold, datasets. See PR #5.
 
 ## [0.4.0] — M3 — Dimensionality Reduction
 
