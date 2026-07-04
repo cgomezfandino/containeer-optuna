@@ -179,3 +179,30 @@
 **Complexity:** O(n_samples^2) to O(n_samples^3) training; O(n_support_vectors * n_features) predict
 
 **Key hyperparameters:** `C`, `kernel`, `gamma`, `probability`
+
+## `transformer_classifier`
+
+**Pre-trained Transformer (DistilBERT/BERT) fine-tuning for text classification.**
+
+**When to use:** Text classification tasks (sentiment, topic, spam, intent) where pre-trained language models dramatically outperform classical NLP (TF-IDF + LogReg). Optuna searches model_name, learning_rate, batch_size, and warmup — then fine-tunes with epoch pruning. Requires pip install containeer-optuna[nlp].
+
+**Pros:**
+- ✅ State-of-the-art on most text classification benchmarks.
+- ✅ Transfer learning: leverages pre-trained language understanding with just a few epochs of fine-tuning.
+- ✅ Optuna can search across model families (DistilBERT vs BERT) and hyperparameters (lr, warmup, batch_size) in one study.
+- ✅ Epoch pruning cuts bad configs early — critical since transformer training is expensive.
+- ✅ Works with any classification metric (accuracy, f1, roc_auc).
+
+**Cons:**
+- ❌ Requires transformers + datasets + tokenizers (heavy [nlp] extra).
+- ❌ Very slow on CPU — GPU strongly recommended for any real dataset.
+- ❌ Many hyperparameters (model_name, lr, batch_size, epochs, warmup, weight_decay, max_seq_length) — needs many Optuna trials.
+- ❌ Pre-trained model download on first run (~250MB for DistilBERT, ~440MB for BERT).
+- ❌ Prone to catastrophic forgetting if learning_rate is too high.
+- ❌ Max sequence length truncation can lose information on long texts.
+
+**Assumptions:** Input is raw text (strings); GPU recommended for practical training speed; Classes are integer-encoded.
+
+**Complexity:** O(epochs * n_samples * seq_len * hidden_dim) per trial; model download ~250MB-440MB on first run
+
+**Key hyperparameters:** `model_name`, `learning_rate`, `batch_size`, `epochs`, `warmup_ratio`, `max_seq_length`, `weight_decay`

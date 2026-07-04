@@ -1,8 +1,9 @@
-"""Deep learning models (PyTorch) — MLP, CNN, RNN/GRU for tabular/image/sequence data.
+"""Deep learning models (PyTorch) — MLP, CNN, RNN/GRU, Transformer.
 
 Public API:
     MLP, build_mlp_module, get_loss_fn
     build_cnn_module, build_rnn_module
+    build_transformer_module, build_tokenizer
     DL_BACKENDS, get_backend
 """
 
@@ -10,6 +11,7 @@ from .backends import DL_BACKENDS, CNNBackend, DLBackend, MLPBackend, RNNBackend
 from .cnn import build_cnn_module
 from .mlp import MLP, build_mlp_module, get_loss_fn
 from .rnn import build_rnn_module
+from .transformer import build_tokenizer, build_transformer_module
 
 __all__ = [
     "MLP",
@@ -17,6 +19,8 @@ __all__ = [
     "get_loss_fn",
     "build_cnn_module",
     "build_rnn_module",
+    "build_transformer_module",
+    "build_tokenizer",
     "DLBackend",
     "MLPBackend",
     "CNNBackend",

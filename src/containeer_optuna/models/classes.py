@@ -111,6 +111,8 @@ DL_MODELS: dict[str, type | None] = {
     # M7 — DL advanced
     "cnn_classifier": None,
     "rnn_classifier": None,
+    # M8 — NLP
+    "transformer_classifier": None,
 }
 
 
@@ -121,6 +123,7 @@ try:
     DL_MODELS["mlp_classifier"] = _MLP
     DL_MODELS["cnn_classifier"] = _MLP  # stub class — DL objective uses the backend
     DL_MODELS["rnn_classifier"] = _MLP
+    DL_MODELS["transformer_classifier"] = _MLP  # M8 — NLP objective uses it directly
 except ImportError:  # pragma: no cover — torch not installed
     pass
 

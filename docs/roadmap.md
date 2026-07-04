@@ -54,7 +54,7 @@ pruning (report intermediate values).
 
 CNN (vision), RNN/Transformer (sequences).
 
-## M8 — AI/NLP (planned)
+## M8 — AI/NLP ✅
 
 HuggingFace fine-tuning with Optuna. Embeddings.
 

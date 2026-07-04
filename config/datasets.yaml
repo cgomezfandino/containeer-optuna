@@ -96,3 +96,12 @@ datasets:
     target_column: null
     feature_columns: null
     preprocessing: {}
+
+  # M8 — Text datasets via HuggingFace (requires [nlp] extra).
+  # AG_NEWS: 120000 training samples, 4-class news topic classification.
+  - name: "ag_news"
+    source: "huggingface"
+    huggingface_name: "ag_news"
+    target_column: null
+    feature_columns: null
+    preprocessing: {}

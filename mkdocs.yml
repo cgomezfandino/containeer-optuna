@@ -84,6 +84,7 @@ nav:
       - Levels of Maturity: tutorials/levels_of_maturity.md
       - Statistics: tutorials/statistics_tutorial.md
       - Deep Learning: tutorials/deep_learning_tutorial.md
+      - NLP: tutorials/nlp_tutorial.md
   - API Reference:
       - containeer_optuna: api/containeer_optuna.md
       - config: api/config.md
