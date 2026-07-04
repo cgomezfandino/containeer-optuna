@@ -282,5 +282,99 @@ class OptunaRunner:
             "contour": vis.plot_contour(self.study),
         }
 
+    def plot_best_embedding(self) -> object:
+        """Plot a 2D embedding of ``self.X`` using the best trial's reducer.
+
+        Rebuilds the best-trial pipeline (scaler → reducer → clusterer) from
+        ``study.best_params``, fits it on ``self.X``, extracts the reducer's
+        2D projection, and scatters it colored by the clusterer's labels.
+
+        Requires:
+        * The study must have run (``self.study`` not None, ≥1 trial).
+        * ``self.X`` must be loaded.
+        * The experiment must use a reducer (``config.reducer``) and be a
+          clustering task. For regression or no-reducer experiments this raises
+          a clear error.
+
+        Returns:
+            The matplotlib :class:`Figure` with the 2D scatter.
+        """
+        if self.study is None or not self.study.trials:
+            raise RuntimeError("Call .run() before .plot_best_embedding()")
+        if self.X is None:
+            raise RuntimeError("No data loaded; call .load_data() first")
+        if self.config.task != "clustering":
+            raise ValueError(
+                "plot_best_embedding is only supported for clustering tasks "
+                f"(got task={self.config.task!r})"
+            )
+        if not self.config.reducer:
+            raise ValueError(
+                "plot_best_embedding requires a reducer in the experiment config "
+                "(set `reducer:` to pca / tsne / umap / truncated_svd / factor_analysis)"
+            )
+
+        from ..evaluation.plotting import plot_embedding_2d
+
+        best_params = dict(self.study.best_params)
+
+        # Reconstruct each estimator with the best params (de-namespaced).
+        reducer_name = self.config.reducer
+        # For model-selection studies, the best model_type wins; else use config.model.
+        model_name = best_params.pop("model_type", self.config.model)
+        # Feature-set choice (if any) is not relevant for embedding viz.
+        best_params.pop("feature_set", None)
+
+        reducer_overrides = self._denamespace(best_params, reducer_name)
+        model_overrides = self._denamespace(best_params, model_name)
+
+        from ..models import MODEL_CLASSES, get_model
+
+        # Build the scaler (if any).
+        scaler = get_model(self.config.scaler) if self.config.scaler else None
+        reducer = get_model(
+            reducer_name, random_state=self.config.random_state, **reducer_overrides
+        )
+        # Filter model_overrides to kwargs the estimator accepts.
+        import inspect
+
+        cls = MODEL_CLASSES.get(model_name)
+        if cls is not None:
+            valid = set(inspect.signature(cls).parameters) - {"self"}
+            model_overrides = {k: v for k, v in model_overrides.items() if k in valid}
+        model = get_model(model_name, random_state=self.config.random_state, **model_overrides)
+
+        # Apply steps manually (NOT sklearn.Pipeline — it requires `transform`
+        # on intermediate steps, which t-SNE lacks). fit_transform each step in
+        # sequence; the clusterer uses fit_predict on the reduced data.
+        X_arr = np.asarray(self.X)
+        if scaler is not None:
+            X_arr = scaler.fit_transform(X_arr)
+        # Reducer: use fit_transform (works for both t-SNE-no-transform and
+        # PCA/SVD/FA/UMAP).
+        embedding = reducer.fit_transform(X_arr)
+        labels = model.fit_predict(embedding)
+
+        X2d = np.asarray(embedding)[:, :2]
+        return plot_embedding_2d(
+            X2d,
+            labels=labels,
+            title=f"Best embedding — {self.config.optimization.study_name}",
+        )
+
+    @staticmethod
+    def _denamespace(params: dict[str, Any], prefix: str) -> dict[str, Any]:
+        """Strip a ``<prefix>_`` namespace from matching keys.
+
+        Keys not starting with the prefix are ignored. E.g. with prefix "tsne",
+        ``{"tsne_perplexity": 20, "kmeans_n_clusters": 3}`` → ``{"perplexity": 20}``.
+        """
+        out: dict[str, Any] = {}
+        p = f"{prefix}_"
+        for k, v in params.items():
+            if k.startswith(p):
+                out[k[len(p) :]] = v
+        return out
+
 
 __all__ = ["OptunaRunner"]

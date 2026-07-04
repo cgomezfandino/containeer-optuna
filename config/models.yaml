@@ -312,6 +312,52 @@ models:
         low: 2
         high: 10
 
+  # --- M3: Dimensionality reduction -------------------------------------
+
+  - name: "tsne"
+    type: "reducer"
+    default_params:
+      n_components: 2
+      perplexity: 30
+      learning_rate: "auto"
+      init: "pca"
+      method: "barnes_hut"
+      random_state: 42
+    param_space:
+      n_components:
+        type: "categorical"
+        choices: [2, 3]
+      perplexity:
+        type: "float"
+        low: 5
+        high: 30
+      learning_rate:
+        type: "categorical"
+        choices: ["auto", 200, 500]
+
+  - name: "truncated_svd"
+    type: "reducer"
+    default_params:
+      n_components: 2
+      random_state: 42
+    param_space:
+      n_components:
+        type: "int"
+        low: 2
+        high: 15
+
+  - name: "factor_analysis"
+    type: "reducer"
+    default_params:
+      n_components: 2
+      random_state: 0
+      max_iter: 1000
+    param_space:
+      n_components:
+        type: "int"
+        low: 2
+        high: 15
+
   - name: "standard_scaler"
     type: "scaler"
     default_params: {}

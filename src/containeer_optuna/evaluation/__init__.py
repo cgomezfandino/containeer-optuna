@@ -1,9 +1,10 @@
-"""Evaluation: metrics and model cards.
+"""Evaluation: metrics, model cards, and visualization.
 
 Public API:
     REGRESSION_SCORERS, get_regression_scorer
     regression_metrics, clustering_metrics
     ModelCard, get_model_card, all_model_cards, card_to_dict
+    plot_embedding_2d, plot_scree
 """
 
 from .metrics import (
@@ -18,6 +19,7 @@ from .model_cards import (
     card_to_dict,
     get_model_card,
 )
+from .plotting import plot_embedding_2d, plot_scree
 
 __all__ = [
     "REGRESSION_SCORERS",
@@ -28,4 +30,6 @@ __all__ = [
     "get_model_card",
     "all_model_cards",
     "card_to_dict",
+    "plot_embedding_2d",
+    "plot_scree",
 ]

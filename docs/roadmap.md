@@ -21,7 +21,7 @@ categorical studies (one study across model families).
 HDBSCAN, Agglomerative, Spectral, Birch, OPTICS. Robust noise handling.
 Cluster stability metric.
 
-## M3 — Dimensionality reduction (planned)
+## M3 — Dimensionality reduction ✅ (current release)
 
 t-SNE (real perplexity — the original `perplexity.ipynb` is misnamed; it uses
 UMAP, not t-SNE). TruncatedSVD, FactorAnalysis. Visualization utilities.

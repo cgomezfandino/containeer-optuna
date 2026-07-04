@@ -1,0 +1,22 @@
+name: clustering_truncated_svd
+task: clustering
+dataset: iris
+model: kmeans
+scaler: standard_scaler
+reducer: truncated_svd    # M3 — linear reducer for sparse/dense data
+random_state: 42
+
+cv:
+  strategy: kfold
+  n_splits: 3
+  random_state: 42
+
+optimization:
+  enabled: true
+  n_trials: 30
+  direction: maximize
+  study_name: clustering_truncated_svd
+  storage: sqlite:///clustering_optuna.db
+  load_if_exists: true
+  sampler: tpe
+  pruner: null

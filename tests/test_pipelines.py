@@ -44,3 +44,36 @@ def test_get_pipeline_fit_predict(small_clustering_data):
 def test_get_pipeline_unknown_model_raises():
     with pytest.raises(KeyError):
         get_pipeline("not_a_model")
+
+
+# --- M3: new reducer step types ---------------------------------------
+
+
+def test_get_pipeline_with_truncated_svd_reducer():
+    from sklearn.decomposition import TruncatedSVD
+
+    p = get_pipeline("kmeans", scaler="standard_scaler", reducer="truncated_svd")
+    assert isinstance(p.steps[1][1], TruncatedSVD)
+
+
+def test_get_pipeline_with_factor_analysis_reducer():
+    from sklearn.decomposition import FactorAnalysis
+
+    p = get_pipeline("kmeans", scaler="standard_scaler", reducer="factor_analysis")
+    assert isinstance(p.steps[1][1], FactorAnalysis)
+
+
+def test_tsne_in_pipeline_raises_at_fit(small_clustering_data):
+    """t-SNE has no transform(), so sklearn Pipeline.fit_predict raises.
+
+    This is a known sklearn limitation: Pipeline._validate_steps() requires
+    all intermediate steps to implement transform. t-SNE only implements
+    fit_transform. Use plot_best_embedding (which applies steps manually) to
+    visualize t-SNE embeddings — not a YAML reducer.
+    """
+    p = get_pipeline("kmeans", scaler="standard_scaler", reducer="tsne")
+    from sklearn.manifold import TSNE
+
+    assert isinstance(p.steps[1][1], TSNE)
+    with pytest.raises(TypeError, match="transform"):
+        p.fit_predict(small_clustering_data)

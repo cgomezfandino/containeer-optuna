@@ -40,6 +40,9 @@ def test_load_model_config_accepts_reducer_and_scaler():
     for name, kind in [
         ("pca", "reducer"),
         ("umap", "reducer"),
+        ("tsne", "reducer"),
+        ("truncated_svd", "reducer"),
+        ("factor_analysis", "reducer"),
         ("standard_scaler", "scaler"),
         ("minmax_scaler", "scaler"),
     ]:
