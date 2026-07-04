@@ -1,28 +1,35 @@
 # Changelog
 
-## [0.6.0] — M5 — Statistics
+## [Unreleased] — M6 — Deep Learning Foundation
 
 ### Added
-- **`statistics/` subpackage** — hypothesis tests, normality tests,
-  correlation, chi-square, and descriptive statistics, all powered by
-  `scipy.stats` (zero new dependencies).
-- **Uniform `StatResult` dataclass** — every test returns
-  `(test_name, statistic, pvalue, extra)` for a consistent interface.
-- **Functions**: two_sample_ttest, paired_ttest, mann_whitney_u,
-  one_way_anova, kruskal_wallis (hypothesis); shapiro_test, dagostino_test,
-  anderson_test (normality); pearson_correlation, spearman_correlation,
-  kendall_correlation, correlation_matrix (correlation); chi_square
-  (categorical); describe (descriptive).
-- **CLI `stats` subcommand group**: `describe`, `ttest`, `anova`,
-  `correlation`, `normality` — for quick exploratory analysis from the
-  terminal.
-- **20 new tests** (167 total): every stats function tested on synthetic
-  data with known expected behavior (significance, correlation strength,
-  normality acceptance/rejection).
+- **PyTorch MLP** for tabular regression (`mlp_regressor`) and classification
+  (`mlp_classifier`). Requires `pip install containeer-optuna[dl]`.
+- **`make_dl_objective`**: a custom DL objective that bypasses `cross_validate`
+  and runs a manual PyTorch training loop with **epoch pruning** (`trial.report`
+  + `trial.should_prune`). Mirrors the clustering objective's manual-fold pattern.
+- **`models/dl/` subpackage**: `build_mlp_module` (flexible `nn.Module`) +
+  `get_loss_fn` (MSELoss / CrossEntropyLoss).
+- **`[dl]` optional extra** in `pyproject.toml` (`torch>=2.0.0`).
+- **Lazy torch import**: package imports fine without torch; DL models raise
+  a clear ImportError when accessed.
+- **Experiments**: `diabetes_mlp_regression.yaml`, `breast_cancer_mlp_classification.yaml`
+  (both with `pruner: median`).
+- **7 new tests** (174 total): MLP forward pass, DL regression e2e, DL
+  classification e2e, epoch pruning fires, model cards. All guarded by
+  `pytest.importorskip("torch")`.
 
-### Design note
-Stats are standalone utilities (NOT Optuna objectives and NOT a TaskType).
-They produce p-values/statistics, not values to optimize over trials.
+### Design
+- DL models bypass `cross_validate` (incompatible with PyTorch training loops).
+- The DL objective iterates CV folds manually and reports val_loss per epoch
+  for pruning — the main advantage of Optuna for DL.
+- `hidden_layer_sizes` expressed as categorical choices of lists
+  (`[[64], [128, 64], [256, 128, 64]]`).
+
+## [0.6.0] — M5 — Statistics
+
+scipy.stats-based hypothesis tests, normality, correlation, CLI stats group.
+See PR #6.
 
 ## [0.5.0] — M4 — Classification
 

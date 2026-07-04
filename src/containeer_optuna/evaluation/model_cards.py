@@ -405,6 +405,69 @@ DECISION_TREE_CLASSIFIER_CARD = ModelCard(
 )
 
 
+# --- M6: Deep Learning ---------------------------------------------------
+
+MLP_REGRESSOR_CARD = ModelCard(
+    name="mlp_regressor",
+    kind="regression",
+    summary="Multi-Layer Perceptron (PyTorch) for tabular regression.",
+    when_to_use=(
+        "When linear models underfit and tree ensembles aren't ideal (e.g. very "
+        "wide data with complex feature interactions). The DL objective "
+        "supports epoch pruning — set optimization.pruner: median to cut bad "
+        "trials early. Requires pip install containeer-optuna[dl]."
+    ),
+    pros=[
+        "Universal approximator — can fit any continuous function given enough neurons and data.",
+        "Epoch pruning (trial.report + trial.should_prune) eliminates bad "
+        "configs early — the main advantage of Optuna for DL.",
+        "Configurable architecture (depth, width, dropout, activation).",
+        "Works with any regression metric (r2/mse/rmse/mae).",
+    ],
+    cons=[
+        "Requires PyTorch (optional [dl] extra — heavier install).",
+        "Many hyperparameters (lr, batch_size, epochs, architecture, dropout) — "
+        "needs more Optuna trials than sklearn models.",
+        "Sensitive to feature scaling (StandardScaler mandatory).",
+        "Prone to overfitting on small datasets (use dropout + fewer epochs).",
+        "Slower per trial than sklearn models (GPU recommended for large data).",
+        "Non-deterministic without a fixed seed (the framework sets random_state).",
+    ],
+    assumptions=["Features scaled", "Sufficient data for the architecture size"],
+    complexity="O(epochs * n_samples * max(hidden_sizes)) per trial",
+    key_hyperparameters=["hidden_layer_sizes", "learning_rate", "epochs", "batch_size", "dropout"],
+    milestone="M6",
+)
+
+MLP_CLASSIFIER_CARD = ModelCard(
+    name="mlp_classifier",
+    kind="classification",
+    summary="Multi-Layer Perceptron (PyTorch) for tabular classification.",
+    when_to_use=(
+        "When linear classifiers underfit and tree ensembles aren't ideal. The "
+        "DL objective supports epoch pruning. Requires "
+        "pip install containeer-optuna[dl]."
+    ),
+    pros=[
+        "Captures non-linear class boundaries.",
+        "Epoch pruning cuts bad trials early.",
+        "Softmax output gives calibrated-ish probabilities.",
+        "Works with any classification metric (accuracy/f1/roc_auc).",
+    ],
+    cons=[
+        "Requires PyTorch (optional [dl] extra).",
+        "Many hyperparameters — needs more trials than sklearn classifiers.",
+        "Sensitive to feature scaling.",
+        "Prone to overfitting on small datasets.",
+        "Slower per trial than sklearn classifiers.",
+    ],
+    assumptions=["Features scaled", "Sufficient data for the architecture size"],
+    complexity="O(epochs * n_samples * max(hidden_sizes)) per trial",
+    key_hyperparameters=["hidden_layer_sizes", "learning_rate", "epochs", "batch_size", "dropout"],
+    milestone="M6",
+)
+
+
 # --- M0: Clustering ------------------------------------------------------
 
 KMEANS_CARD = ModelCard(
@@ -856,6 +919,9 @@ _ALL_CARDS: dict[str, ModelCard] = {
         RANDOM_FOREST_CARD,
         GRADIENT_BOOSTING_CARD,
         SVR_CARD,
+        # M6 — Deep Learning
+        MLP_REGRESSOR_CARD,
+        MLP_CLASSIFIER_CARD,
         # M4 — Classification
         LOGISTIC_REGRESSION_CARD,
         KNN_CARD,

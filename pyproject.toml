@@ -61,6 +61,9 @@ notebooks = [
     "ipykernel>=6.30.0",
     "ipywidgets>=8.1.0",
 ]
+dl = [
+    "torch>=2.0.0",
+]
 
 [project.scripts]
 containeer-optuna = "containeer_optuna.cli:app"

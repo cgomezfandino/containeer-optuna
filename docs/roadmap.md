@@ -45,7 +45,7 @@ correlation (Pearson, Spearman, Kendall, matrix), chi-square, descriptive
 statistics — all powered by `scipy.stats` (zero new dependencies). Uniform
 `StatResult` return type. `containeer-optuna stats` CLI subcommand group.
 
-## M6 — Deep Learning foundation (planned)
+## M6 — Deep Learning foundation ✅
 
 PyTorch + Optuna (MLP for tabular). `[dl]` extra. Device handling. Epoch
 pruning (report intermediate values).

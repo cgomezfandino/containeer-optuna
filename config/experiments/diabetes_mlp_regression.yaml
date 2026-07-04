@@ -1,0 +1,24 @@
+name: diabetes_mlp_regression
+task: regression
+dataset: diabetes
+model: mlp_regressor       # M6 — PyTorch MLP (requires [dl] extra)
+metric: r2
+scaler: standard_scaler
+reducer: null
+random_state: 42
+
+cv:
+  strategy: shuffle_split
+  n_splits: 3
+  test_size: 0.2
+  random_state: 42
+
+optimization:
+  enabled: true
+  n_trials: 30
+  direction: maximize
+  study_name: diabetes_mlp_regression
+  storage: sqlite:///optuna_studies.db
+  load_if_exists: true
+  sampler: tpe
+  pruner: median            # M6 — epoch pruning
