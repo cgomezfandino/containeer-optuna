@@ -1,32 +1,33 @@
 # Changelog
 
-## [Unreleased] — M8 — NLP/AI (Transformers)
+## [1.0.0] — M9 — Productionization
 
 ### Added
-- **Transformer text classification** (`transformer_classifier`): DistilBERT/BERT
-  fine-tuning for text classification. Per-trial: tokenization, AdamW optimizer,
-  linear warmup scheduler, epoch pruning (trial.report + should_prune).
-- **`make_nlp_objective`**: dedicated objective for transformer fine-tuning,
-  separate from the DL objective (transformers need tokenization +
-  attention_mask which don't fit the tensor-in/logits-out DL loop).
-- **`models/dl/transformer.py`**: build_transformer_module + build_tokenizer
-  (lazy import of transformers).
-- **`[nlp]` optional extra**: transformers, datasets, tokenizers, accelerate.
-- **`source: huggingface`**: new dataset source for text data (AG_NEWS, IMDB).
-  Returns (texts, labels) numpy arrays.
-- **Model card**: TRANSFORMER_CLASSIFIER_CARD (milestone M8).
-- **Experiment**: agnews_transformer_classification.yaml.
-- **5 new tests** (185 total): transformer module build, tokenizer, NLP e2e,
-  card assertions. All guarded by pytest.importorskip("transformers").
+- **Model serialization**: `save_model: true` in experiment YAML now persists
+  the best model as `.joblib` (via joblib). New `fit_best_pipeline()` method
+  on OptunaRunner reconstructs and fits the best-trial pipeline on the full
+  dataset.
+- **Prediction saving**: `save_predictions: true` now persists predictions
+  as `.npy`. Previously these config fields were declared but dead.
+- **MLflow tracking** (optional `[mlflow]` extra): set `tracking: mlflow` in
+  optimization config to log params/metrics to MLflow. Lazy import.
+- **`__main__.py`**: `python -m containeer_optuna --help` now works.
+- **PyPI release metadata**: `[project.urls]`, classifier bumped Alpha→Beta,
+  requires-python bumped ≥3.10 (matches CI matrix).
+- **Publish workflow** (`.github/workflows/publish.yml`): auto-publishes to
+  PyPI on tag/release push via `pypa/gh-action-pypi-publish`.
+- **7 new tests** (192 total): fit_best_pipeline, save_model, save_predictions,
+  save_model via config, python -m, tracking field, DL rejection.
 
-### Design
-- NLP uses a separate objective (make_nlp_objective), NOT the DL backend
-  abstraction. Transformers need raw text → tokenizer → input_ids +
-  attention_mask → model forward, which is structurally different from the
-  tensor-in/logits-out DL loop.
-- _NLP_MODELS set in runner.py routes to make_nlp_objective before _DL_MODELS.
-- DatasetConfig.source widened to accept "huggingface".
+### Changed
+- Version bumped: `0.6.0` → `1.0.0`.
+- `requires-python` bumped from `>=3.9` to `>=3.10` (matches CI matrix).
+- Development Status classifier: `3 - Alpha` → `4 - Beta`.
 
-## [0.6.0–0.7.0] — M5–M7
+## [0.6.0] — M5–M6
 
-Statistics (M5) + DL MLP (M6) + DL CNN/RNN (M7). See PRs #6–#9.
+Statistics + DL MLP. See PRs #6–#8.
+
+## [0.7.0] — M7–M8
+
+DL CNN/RNN + NLP transformers. See PRs #9–#10.

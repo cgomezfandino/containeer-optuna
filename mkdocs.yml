@@ -70,6 +70,7 @@ nav:
       - Optimization: user_guide/optimization.md
       - Evaluation: user_guide/evaluation.md
       - Statistics: user_guide/statistics.md
+      - Production: user_guide/production.md
   - Model Cards:
       - Overview: model_cards/index.md
       - Regression: model_cards/regression.md

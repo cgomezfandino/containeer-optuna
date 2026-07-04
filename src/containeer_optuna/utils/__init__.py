@@ -2,7 +2,7 @@
 
 Public API:
     seed_all, get_logger, ensure_dir, results_dir, save_json,
-    save_predictions, study_summary
+    save_predictions, save_model, study_summary
 """
 
 from .utils import (
@@ -10,6 +10,7 @@ from .utils import (
     get_logger,
     results_dir,
     save_json,
+    save_model,
     save_predictions,
     seed_all,
     study_summary,
@@ -22,5 +23,6 @@ __all__ = [
     "results_dir",
     "save_json",
     "save_predictions",
+    "save_model",
     "study_summary",
 ]

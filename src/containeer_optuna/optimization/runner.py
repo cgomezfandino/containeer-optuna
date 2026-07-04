@@ -279,7 +279,133 @@ class OptunaRunner:
         )
 
         self.study = study
+
+        # --- Post-optimization: save model + predictions (M9) ---
+        if (self.config.save_model or self.config.save_predictions) and study.trials:
+            try:
+                pipeline = self.fit_best_pipeline()
+                if self.config.save_model:
+                    from ..utils import save_model as _save_model
+
+                    path = _save_model(pipeline, self.config.name)
+                    self.logger.info("Saved best model → %s", path)
+                if self.config.save_predictions:
+                    from ..utils import save_predictions as _save_preds
+
+                    if self.config.task in ("regression", "classification"):
+                        preds = pipeline.predict(self.X)
+                    else:
+                        preds = pipeline.fit_predict(self.X)
+                    path = _save_preds(preds, self.config.name)
+                    self.logger.info("Saved predictions → %s", path)
+            except Exception as e:
+                self.logger.warning("Could not save model/predictions: %s", e)
+
+        # --- Optional MLflow tracking (M9) ---
+        if opt_cfg.tracking == "mlflow" and study.trials:
+            self._log_to_mlflow(study)
+
         return study
+
+    def fit_best_pipeline(self) -> Any:
+        """Reconstruct and fit the best-trial pipeline on the full dataset.
+
+        Builds the scaler → reducer → model from ``study.best_params`` (for
+        sklearn models), fits on ``self.X`` / ``self.y``, and returns the
+        fitted pipeline. For DL/NLP models this raises NotImplementedError
+        (they require the custom training loop, not a simple refit).
+
+        Returns:
+            A fitted sklearn Pipeline (or estimator).
+
+        Raises:
+            RuntimeError: If the study hasn't run yet.
+            NotImplementedError: For DL/NLP models (use the trained model
+                from the objective instead).
+        """
+        if self.study is None or not self.study.trials:
+            raise RuntimeError("Call .run() before .fit_best_pipeline()")
+        if self.X is None:
+            raise RuntimeError("No data loaded")
+        if self.config.model in _DL_MODELS or self.config.model in _NLP_MODELS:
+            raise NotImplementedError(
+                "fit_best_pipeline is not supported for DL/NLP models "
+                f"({self.config.model}). The training loop is in the objective, "
+                "not a simple fit/predict. Use the study results directly."
+            )
+
+        import inspect
+
+        from ..models import MODEL_CLASSES, get_model
+
+        best_params = dict(self.study.best_params)
+        # For model-selection, the best model_type wins.
+        model_name = best_params.pop("model_type", self.config.model)
+        best_params.pop("feature_set", None)
+
+        # De-namespaced overrides for each step.
+        scaler_overrides: dict[str, Any] = {}
+        reducer_overrides = self._denamespace(best_params, self.config.reducer or "")
+        model_overrides = self._denamespace(best_params, model_name)
+
+        # Filter model overrides to valid kwargs.
+        cls = MODEL_CLASSES.get(model_name)
+        if cls is not None:
+            valid = set(inspect.signature(cls).parameters) - {"self"}
+            model_overrides = {k: v for k, v in model_overrides.items() if k in valid}
+
+        # Build the pipeline.
+        steps: list[tuple[str, Any]] = []
+        if self.config.scaler:
+            steps.append(("scaler", get_model(self.config.scaler, **scaler_overrides)))
+        if self.config.reducer:
+            steps.append(
+                (
+                    "reducer",
+                    get_model(
+                        self.config.reducer,
+                        random_state=self.config.random_state,
+                        **reducer_overrides,
+                    ),
+                )
+            )
+        steps.append(
+            (
+                "model",
+                get_model(
+                    model_name,
+                    random_state=self.config.random_state,
+                    **model_overrides,
+                ),
+            )
+        )
+
+        from sklearn.pipeline import Pipeline
+
+        pipeline = Pipeline(steps)
+        if self.config.task == "clustering":
+            pipeline.fit(self.X)
+        else:
+            pipeline.fit(self.X, self.y)
+        return pipeline
+
+    def _log_to_mlflow(self, study: Any) -> None:
+        """Log study results to MLflow (M9). Requires the [mlflow] extra."""
+        try:
+            import mlflow
+        except ImportError:
+            self.logger.warning(
+                "MLflow tracking requested but mlflow is not installed. "
+                "Install with: pip install containeer-optuna[mlflow]"
+            )
+            return
+
+        mlflow.log_params(study.best_params)
+        mlflow.log_metric("best_value", float(study.best_value))
+        best = study.best_trial
+        for k, v in best.user_attrs.items():
+            if isinstance(v, int | float):
+                mlflow.log_metric(k, float(v))
 
     # -- reporting --------------------------------------------------------
 

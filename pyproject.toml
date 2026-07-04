@@ -4,22 +4,21 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "containeer-optuna"
-version = "0.6.0"
-description = "Optuna hyperparameter optimization experiments with modular pipelines"
+version = "1.0.0"
+description = "An Optuna-first data science framework for ML, DL, NLP, and statistics"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 authors = [
     {name = "Carlos Gomez", email = "cgomezfandino@example.com"}
 ]
-keywords = ["optuna", "hyperparameter-optimization", "machine-learning", "clustering", "regression"]
+keywords = ["optuna", "hyperparameter-optimization", "machine-learning", "deep-learning", "nlp", "statistics"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -45,6 +44,13 @@ dependencies = [
     "plotly>=6.3.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/cgomezfandino/containeer-optuna"
+Repository = "https://github.com/cgomezfandino/containeer-optuna"
+Documentation = "https://github.com/cgomezfandino/containeer-optuna#readme"
+Changelog = "https://github.com/cgomezfandino/containeer-optuna/blob/main/CHANGELOG.md"
+Issues = "https://github.com/cgomezfandino/containeer-optuna/issues"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4.0",
@@ -55,6 +61,7 @@ dev = [
     "mkdocs>=1.5.0",
     "mkdocs-material>=9.0.0",
     "mkdocstrings[python]>=0.23.0",
+    "build>=1.0.0",
 ]
 notebooks = [
     "jupyter>=1.0.0",
@@ -69,6 +76,9 @@ nlp = [
     "datasets>=2.0.0",
     "tokenizers>=0.13.0",
     "accelerate>=0.20.0",
+]
+mlflow = [
+    "mlflow>=2.0.0",
 ]
 
 [project.scripts]
