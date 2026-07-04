@@ -106,3 +106,17 @@ def test_get_regression_scorer_unknown_raises():
 
     with pytest.raises(ValueError, match="Unknown regression metric"):
         get_regression_scorer("nope")
+
+
+# --- M2: clustering model cards -----------------------------------------
+
+
+def test_m2_model_cards_present():
+    cards = {c.name for c in all_model_cards()}
+    for m in ["hdbscan", "agglomerative", "spectral", "birch", "optics"]:
+        assert m in cards
+
+
+def test_m2_cards_marked_m2_milestone():
+    for name in ["hdbscan", "agglomerative", "spectral", "birch", "optics"]:
+        assert get_model_card(name).milestone == "M2"

@@ -172,3 +172,57 @@ def test_gradient_boosting_with_sampled_params():
     assert est.n_estimators == 300
     assert est.max_depth == 5
     assert est.subsample == 0.8
+
+
+# --- M2: new clustering models -----------------------------------------
+
+
+@pytest.mark.parametrize(
+    "name,cls_name",
+    [
+        ("agglomerative", "AgglomerativeClustering"),
+        ("spectral", "SpectralClustering"),
+        ("birch", "Birch"),
+        ("optics", "OPTICS"),
+    ],
+)
+def test_m2_clustering_models_instantiate(name, cls_name):
+    est = get_model(name)
+    assert type(est).__name__ == cls_name
+
+
+def test_agglomerative_with_sampled_params():
+    # n_clusters (int), linkage (categorical)
+    trial = _FakeTrial([4, "average"])
+    est = get_model("agglomerative", trial=trial, namespace="agglomerative")
+    assert est.n_clusters == 4
+    assert est.linkage == "average"
+
+
+def test_birch_with_sampled_params():
+    # n_clusters (int), threshold (float)
+    trial = _FakeTrial([5, 0.3])
+    est = get_model("birch", trial=trial, namespace="birch")
+    assert est.n_clusters == 5
+    assert est.threshold == 0.3
+
+
+def test_optics_with_sampled_params():
+    # min_samples (int), xi (float)
+    trial = _FakeTrial([10, 0.1])
+    est = get_model("optics", trial=trial, namespace="optics")
+    assert est.min_samples == 10
+    assert abs(est.xi - 0.1) < 1e-6
+
+
+def test_hdbscan_graceful_when_unavailable():
+    """If sklearn < 1.3, get_model('hdbscan') raises ImportError, not KeyError."""
+    from containeer_optuna.models import MODEL_CLASSES
+
+    if MODEL_CLASSES.get("hdbscan") is None:
+        with pytest.raises(ImportError, match="optional dependency"):
+            get_model("hdbscan")
+    else:
+        # sklearn >= 1.3: hdbscan is available; just check it instantiates.
+        est = get_model("hdbscan")
+        assert type(est).__name__ == "HDBSCAN"

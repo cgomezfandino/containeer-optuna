@@ -11,7 +11,7 @@ from __future__ import annotations
 from sklearn.base import BaseEstimator
 from sklearn.pipeline import Pipeline
 
-from ..models import get_model
+from ..models import MODEL_CLASSES, get_model
 
 
 class BasePipeline:
@@ -88,6 +88,16 @@ def get_pipeline(
         )
 
     model_ns = namespace or model
+    # Filter overrides to only kwargs the estimator's constructor accepts.
+    # Some clusterers (DBSCAN, Agglomerative, OPTICS, Birch) don't take
+    # random_state; passing it would raise TypeError.
+    cls = MODEL_CLASSES.get(model)
+    if cls is not None:
+        import inspect
+
+        valid_kwargs = set(inspect.signature(cls).parameters) - {"self"}
+        model_overrides = {k: v for k, v in model_overrides.items() if k in valid_kwargs}
+
     final = get_model(
         model,
         trial=trial,

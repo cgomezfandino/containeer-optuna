@@ -16,7 +16,7 @@ ElasticNet, DecisionTree, RandomForest, GradientBoosting, SVR. Pluggable
 metrics (MSE/MAE/RMSE/MAPE). Optuna feature-set selection. Model-selection-as-
 categorical studies (one study across model families).
 
-## M2 — Clustering maturity (planned)
+## M2 — Clustering maturity ✅ (current release)
 
 HDBSCAN, Agglomerative, Spectral, Birch, OPTICS. Robust noise handling.
 Cluster stability metric.
