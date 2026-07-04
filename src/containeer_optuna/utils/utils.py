@@ -120,6 +120,32 @@ def save_predictions(
     return path
 
 
+def save_model(
+    model: Any,
+    experiment_name: str,
+    base: str | Path | None = None,
+) -> Path:
+    """Persist a fitted model to ``<results>/<experiment>_best_model.joblib``.
+
+    Uses joblib (already a dependency) for serialization. Works with any
+    pickle-compatible object (sklearn Pipeline, estimator, etc.).
+
+    Args:
+        model: The fitted model/pipeline to save.
+        experiment_name: Used in the output filename.
+        base: Optional override for the results directory.
+
+    Returns:
+        The path to the saved ``.joblib`` file.
+    """
+    import joblib
+
+    base_dir = results_dir(base)
+    path = base_dir / f"{experiment_name}_best_model.joblib"
+    joblib.dump(model, path)
+    return path
+
+
 def study_summary(study: Any) -> dict[str, Any]:
     """Return a JSON-serializable summary dict of an Optuna study.
 

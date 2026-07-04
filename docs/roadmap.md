@@ -58,7 +58,7 @@ CNN (vision), RNN/Transformer (sequences).
 
 HuggingFace fine-tuning with Optuna. Embeddings.
 
-## M9 — Productionization (planned)
+## M9 — Productionization ✅
 
 Model serialization (joblib/onnx). Optional MLflow tracking. Distributed
 studies (Dask). PyPI release. Cookiecutter template.

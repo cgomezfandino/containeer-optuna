@@ -103,6 +103,7 @@ class OptimizationConfig(BaseModel):
     params: dict[str, dict[str, Any]] = Field(default_factory=dict)
     sampler: Literal["tpe", "random", "cmaes", "nsgaii"] = "tpe"
     pruner: Literal["median", "percentile", "hyperband", "nop"] | None = None
+    tracking: Literal["none", "mlflow"] | None = None
 
 
 class ExperimentConfig(BaseModel):
