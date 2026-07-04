@@ -403,28 +403,26 @@ def make_dl_objective(
 ) -> Callable[[Any], float]:
     """Build a deep-learning Optuna objective with epoch pruning.
 
-    This objective bypasses ``cross_validate`` (which is incompatible with a
-    PyTorch training loop + epoch pruning) and instead iterates CV folds
-    manually — mirroring the pattern in :func:`make_clustering_objective`.
+    Uses a pluggable **backend** (MLP / CNN / RNN) that handles architecture-
+    specific module construction and data preparation. The training loop
+    (epoch loop, minibatch, ``trial.report``, ``should_prune``, scoring) is
+    shared across all backends.
 
     Per trial:
-    1. Sample DL hyperparameters (learning_rate, batch_size, epochs, dropout,
-       hidden_layer_sizes, activation) via ``suggest_params``.
-    2. Build a preprocessing pipeline (scaler → reducer, no final model).
-    3. Per fold: fit_transform on train, transform on test; build a fresh
-       ``MLP`` ``nn.Module``; run a manual epoch loop. After each epoch, call
-       ``trial.report(val_loss, epoch)`` and prune if ``trial.should_prune()``.
-    4. Score the fold's predictions with the configured metric.
-    5. Return the mean CV metric.
+    1. Sample DL hyperparameters via ``suggest_params``.
+    2. Per fold: call ``backend.prepare_fold`` to normalize + shape tensors;
+       call ``backend.build_module`` to build a fresh model; run the epoch loop
+       with pruning.
+    3. Score the fold's predictions with the configured metric.
+    4. Return the mean CV metric.
 
     Requires ``pip install containeer-optuna[dl]`` (PyTorch). The experiment
     YAML should set ``optimization.pruner: median`` (or ``hyperband``) for
-    pruning to actually fire — the default ``NopPruner`` silently disables it.
+    pruning to actually fire.
 
     Args:
-        config: Experiment config (must reference a DL model: mlp_regressor /
-            mlp_classifier).
-        X: Feature matrix.
+        config: Experiment config (must reference a DL model).
+        X: Feature matrix (tabular / image / sequence).
         y: Target vector.
 
     Returns:
@@ -439,7 +437,8 @@ def make_dl_objective(
             "Install it with: pip install containeer-optuna[dl]"
         ) from e
 
-    from ...models.dl.mlp import build_mlp_module, get_loss_fn
+    from ...models.dl.backends import get_backend
+    from ...models.dl.mlp import get_loss_fn
     from ...models.registry import suggest_params
 
     splitter = make_cv_splitter(config.cv)
@@ -463,6 +462,9 @@ def make_dl_objective(
 
     dl_config = load_model_config(config.model)
 
+    # Select the backend for this model.
+    backend = get_backend(config.model)
+
     # Determine device.
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -473,12 +475,9 @@ def make_dl_objective(
         else:
             params = dict(dl_config.default_params)
 
-        hidden_sizes = params.get("hidden_layer_sizes", [128, 64])
-        dropout = float(params.get("dropout", 0.1))
         lr = float(params.get("learning_rate", 0.001))
         batch_size = int(params.get("batch_size", 64))
         epochs = int(params.get("epochs", 50))
-        activation = params.get("activation", "relu")
 
         # For classification, infer n_classes.
         if is_regression:
@@ -492,39 +491,24 @@ def make_dl_objective(
             X_train, X_test = X_arr[train_idx], X_arr[test_idx]
             y_train, y_test = y_arr[train_idx], y_arr[test_idx]
 
-            # Preprocessing (scaler → reducer, built inline).
-            # Reuse sklearn transformers directly.
-            from sklearn.preprocessing import StandardScaler
+            # Backend-specific data preparation (normalization + tensor shaping).
+            X_train_t, X_test_t, y_train_t, y_test_t = backend.prepare_fold(
+                X_train, X_test, y_train, y_test, device, config.task
+            )
 
-            scaler = StandardScaler()
-            X_train = scaler.fit_transform(X_train)
-            X_test = scaler.transform(X_test)
+            # Determine input shape for the module builder.
+            # For MLP: (n_features,). For CNN: (C, H, W). For RNN: (seq_len, input_size).
+            input_shape = tuple(X_train_t.shape[1:])
 
-            # Convert to tensors.
-            X_train_t = torch.FloatTensor(X_train).to(device)
-            X_test_t = torch.FloatTensor(X_test).to(device)
-            if is_regression:
-                y_train_t = torch.FloatTensor(y_train).to(device).unsqueeze(1)
-            else:
-                y_train_t = torch.LongTensor(y_train).to(device)
-
-            # Build a fresh model.
-            model = build_mlp_module(
-                input_dim=X_train.shape[1],
-                hidden_sizes=hidden_sizes,
-                output_dim=output_dim,
-                dropout=dropout,
-                activation=activation,
-                task=config.task,
-            ).to(device)
+            # Build a fresh model via the backend.
+            model = backend.build_module(params, input_shape, output_dim, config.task).to(device)
             optimizer = optim.Adam(model.parameters(), lr=lr)
             loss_fn = get_loss_fn(config.task)
 
-            # Epoch loop with pruning.
+            # Epoch loop with pruning (shared across all backends).
             n = X_train_t.shape[0]
             for epoch in range(epochs):
                 model.train()
-                # Mini-batch training.
                 perm = torch.randperm(n)
                 for start in range(0, n, batch_size):
                     idx = perm[start : start + batch_size]
@@ -540,14 +524,8 @@ def make_dl_objective(
                 model.eval()
                 with torch.no_grad():
                     val_out = model(X_test_t)
-                    if is_regression:
-                        val_loss = loss_fn(
-                            val_out, torch.FloatTensor(y_test).to(device).unsqueeze(1)
-                        )
-                    else:
-                        val_loss = loss_fn(val_out, torch.LongTensor(y_test).to(device))
+                    val_loss = loss_fn(val_out, y_test_t)
 
-                # Report to Optuna for pruning.
                 trial.report(float(val_loss.item()), step=epoch)
                 if trial.should_prune():
                     raise optuna.TrialPruned()

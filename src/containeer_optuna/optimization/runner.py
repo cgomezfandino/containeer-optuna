@@ -31,7 +31,7 @@ from .objectives import (
 )
 
 # Models that use the PyTorch DL objective (custom training loop + pruning).
-_DL_MODELS = {"mlp_regressor", "mlp_classifier"}
+_DL_MODELS = {"mlp_regressor", "mlp_classifier", "cnn_classifier", "rnn_classifier"}
 
 try:
     import optuna

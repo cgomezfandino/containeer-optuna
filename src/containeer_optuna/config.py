@@ -211,9 +211,10 @@ class DatasetConfig(BaseModel):
     path: str | None = None
     target_column: str | None = None
     feature_columns: list[str] | None = None
-    source: Literal["local", "kaggle", "sklearn"] = "local"
+    source: Literal["local", "kaggle", "sklearn", "torchvision"] = "local"
     download: bool = False
     kaggle_dataset: str | None = None
+    torchvision_name: str | None = None
     sklearn_name: str | None = None
     preprocessing: dict[str, Any] = Field(default_factory=dict)
 

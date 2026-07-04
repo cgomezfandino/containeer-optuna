@@ -50,7 +50,7 @@ statistics — all powered by `scipy.stats` (zero new dependencies). Uniform
 PyTorch + Optuna (MLP for tabular). `[dl]` extra. Device handling. Epoch
 pruning (report intermediate values).
 
-## M7 — DL advanced (planned)
+## M7 — DL advanced ✅
 
 CNN (vision), RNN/Transformer (sequences).
 

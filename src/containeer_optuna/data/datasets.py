@@ -25,6 +25,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
 from ..config import DatasetConfig, settings
@@ -184,6 +185,57 @@ def _load_sklearn_dataset(name: str) -> pd.DataFrame:
     return df
 
 
+# Names of torchvision datasets supported (M7).
+_TORCHVISION_LOADERS = {"MNIST", "CIFAR10", "FashionMNIST"}
+
+
+def _load_torchvision_dataset(name: str) -> tuple[np.ndarray, np.ndarray]:
+    """Load a torchvision dataset as ``(X, y)`` numpy arrays.
+
+    Args:
+        name: torchvision dataset key — ``"MNIST"``, ``"CIFAR10"``, or
+            ``"FashionMNIST"``.
+
+    Returns:
+        A tuple ``(X, y)`` where ``X`` is a ``(N, C, H, W)`` float32 numpy array
+        and ``y`` is a ``(N,)`` int64 array of labels.
+
+    Raises:
+        ValueError: If ``name`` is not recognized.
+        ImportError: If ``torchvision`` is not installed.
+    """
+    if name not in _TORCHVISION_LOADERS:
+        raise ValueError(
+            f"Unknown torchvision dataset '{name}'. Known: {sorted(_TORCHVISION_LOADERS)}"
+        )
+
+    try:
+        import torchvision
+        import torchvision.transforms as T
+        from torch.utils.data import DataLoader
+    except ImportError as e:
+        raise ImportError(
+            "torchvision is required for image datasets. "
+            "Install it with: pip install containeer-optuna[dl]"
+        ) from e
+
+    transform = T.ToTensor()
+    train_set = getattr(torchvision.datasets, name)(
+        root=str(Path(settings.data_dir) / "torchvision"),
+        train=True,
+        download=True,
+        transform=transform,
+    )
+
+    # Stack all tensors (can be memory-heavy for large datasets; OK for demos).
+    loader = DataLoader(train_set, batch_size=len(train_set))
+    images, labels = next(iter(loader))
+
+    X = images.numpy()  # (N, C, H, W)
+    y = labels.numpy()  # (N,)
+    return X, y
+
+
 class YamlDatasetLoader(BaseDataset):
     """Concrete dataset loader driven by a :class:`DatasetConfig`.
 
@@ -217,6 +269,11 @@ class YamlDatasetLoader(BaseDataset):
         if cfg.source == "sklearn":
             df = _load_sklearn_dataset(cfg.sklearn_name or cfg.name)
             df = _preprocess(df, preprocessing)
+        elif cfg.source == "torchvision":
+            # Image/sequence datasets via torchvision (MNIST, CIFAR10, etc.).
+            # Returns numpy arrays (X: NCHW, y: labels) — NOT a DataFrame.
+            # The DL objective handles numpy arrays directly.
+            return _load_torchvision_dataset(cfg.torchvision_name or cfg.name)
         elif cfg.source == "kaggle" or (cfg.download and cfg.kaggle_dataset):
             _, df = _resolve_kaggle_path(cfg.kaggle_dataset or "")
             df = _preprocess(df, preprocessing)
