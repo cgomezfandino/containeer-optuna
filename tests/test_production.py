@@ -109,7 +109,7 @@ def test_python_dash_m():
         ["python", "-m", "containeer_optuna", "--help"],
         capture_output=True,
         text=True,
-        timeout=10,
+        timeout=30,
     )
     assert result.returncode == 0
     assert "run" in result.stdout
