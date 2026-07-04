@@ -278,6 +278,23 @@ spark-warehouse/
 *.orc
 
 # End of https://www.toptal.com/developers/gitignore/api/python,spark
+
+# Project-specific
 .env
-optuna/*.db
-notebooks/optuna/*.db
+# Optuna study databases (any location)
+*.db
+# mkdocs build output
+site/
+# Python: ensure venvs and caches are ignored even if not matched above
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+

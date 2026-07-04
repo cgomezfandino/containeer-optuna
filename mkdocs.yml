@@ -1,0 +1,93 @@
+site_name: containeer-optuna
+site_description: An Optuna-first data science framework for ML, DL, AI, and statistics.
+site_url: https://github.com/cgomezfandino/containeer-optuna
+repo_url: https://github.com/cgomezfandino/containeer-optuna
+repo_name: cgomezfandino/containeer-optuna
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_root_heading: true
+            show_source: true
+            separate_signature: true
+            show_signature_annotations: true
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - pymdownx.emoji
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting_started/installation.md
+      - Quickstart: getting_started/quickstart.md
+      - Configuration: getting_started/configuration.md
+  - User Guide:
+      - CLI Reference: user_guide/cli_reference.md
+      - Config Reference: user_guide/config_reference.md
+      - Datasets: user_guide/datasets.md
+      - Models: user_guide/models.md
+      - Pipelines: user_guide/pipelines.md
+      - Optimization: user_guide/optimization.md
+      - Evaluation: user_guide/evaluation.md
+  - Model Cards:
+      - Overview: model_cards/index.md
+      - Regression: model_cards/regression.md
+      - Clustering: model_cards/clustering.md
+      - Reducers: model_cards/reducers.md
+      - Scalers: model_cards/scalers.md
+  - Tutorials:
+      - Regression: tutorials/regression_tutorial.md
+      - Model Selection: tutorials/model_selection.md
+      - Clustering Pipeline: tutorials/clustering_pipeline.md
+      - Levels of Maturity: tutorials/levels_of_maturity.md
+  - API Reference:
+      - containeer_optuna: api/containeer_optuna.md
+      - config: api/config.md
+      - data: api/data.md
+      - models: api/models.md
+      - pipelines: api/pipelines.md
+      - optimization: api/optimization.md
+      - evaluation: api/evaluation.md
+      - utils: api/utils.md
+  - Roadmap: roadmap.md
+  - Contributing: contributing.md

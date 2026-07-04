@@ -1,0 +1,137 @@
+models:
+  - name: "ridge"
+    type: "regression"
+    default_params:
+      alpha: 1.0
+      tol: 0.001
+      random_state: 42
+      max_iter: 10000
+    param_space:
+      alpha:
+        type: "float"
+        low: 0.01
+        high: 100.0
+        log: true
+      tol:
+        type: "float"
+        low: 1e-6
+        high: 1e-2
+        log: true
+
+  - name: "lasso"
+    type: "regression"
+    default_params:
+      alpha: 1.0
+      tol: 0.001
+      random_state: 42
+      max_iter: 10000
+    param_space:
+      alpha:
+        type: "float"
+        low: 0.01
+        high: 100.0
+        log: true
+      tol:
+        type: "float"
+        low: 1e-6
+        high: 1e-2
+        log: true
+
+  - name: "ols"
+    type: "regression"
+    default_params: {}
+    param_space: {}
+
+  - name: "kmeans"
+    type: "clustering"
+    default_params:
+      n_clusters: 3
+      init: "k-means++"
+      n_init: 10
+      random_state: 42
+      algorithm: "lloyd"
+    param_space:
+      n_clusters:
+        type: "int"
+        low: 2
+        high: 10
+      init:
+        type: "categorical"
+        choices: ["k-means++", "random"]
+      algorithm:
+        type: "categorical"
+        choices: ["lloyd", "elkan"]
+
+  - name: "dbscan"
+    type: "clustering"
+    default_params:
+      eps: 0.5
+      min_samples: 5
+    param_space:
+      eps:
+        type: "float"
+        low: 0.1
+        high: 5.0
+        log: true
+      min_samples:
+        type: "int"
+        low: 2
+        high: 20
+
+  - name: "gmm"
+    type: "clustering"
+    default_params:
+      n_components: 3
+      covariance_type: "full"
+      n_init: 3
+      random_state: 42
+    param_space:
+      n_components:
+        type: "int"
+        low: 2
+        high: 10
+      covariance_type:
+        type: "categorical"
+        choices: ["full", "tied", "diag", "spherical"]
+
+  - name: "pca"
+    type: "reducer"
+    default_params:
+      n_components: 2
+      random_state: 42
+    param_space:
+      n_components:
+        type: "int"
+        low: 2
+        high: 15
+
+  - name: "umap"
+    type: "reducer"
+    default_params:
+      n_neighbors: 15
+      min_dist: 0.1
+      n_components: 2
+      random_state: 42
+    param_space:
+      n_neighbors:
+        type: "int"
+        low: 5
+        high: 50
+      min_dist:
+        type: "float"
+        low: 0.0
+        high: 1.0
+      n_components:
+        type: "int"
+        low: 2
+        high: 10
+
+  - name: "standard_scaler"
+    type: "scaler"
+    default_params: {}
+    param_space: {}
+
+  - name: "minmax_scaler"
+    type: "scaler"
+    default_params: {}
+    param_space: {}

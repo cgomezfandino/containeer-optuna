@@ -1,0 +1,54 @@
+datasets:
+  - name: "auto_mpg"
+    path: "./data/auto-mpg.data"
+    target_column: "horsepower"
+    feature_columns:
+      - "weight"
+      - "cylinders"
+      - "displacement"
+      - "acceleration"
+      - "model_year"
+      - "origin"
+    download: false
+    preprocessing:
+      drop_columns: ["car_name"]
+      na_values: ["?"]
+      numeric_conversion: ["horsepower"]
+      sep: "\\s+"
+      header: null
+      names:
+        - "mpg"
+        - "cylinders"
+        - "displacement"
+        - "horsepower"
+        - "weight"
+        - "acceleration"
+        - "model_year"
+        - "origin"
+        - "car_name"
+
+  - name: "customer_personality"
+    kaggle_dataset: "imakash3011/customer-personality-analysis"
+    download: true
+    target_column: null
+    feature_columns: null
+    preprocessing:
+      sep: "\\t"
+      drop_columns: ["ID", "Dt_Customer"]
+      one_hot_encode: ["Education", "Marital_Status"]
+      dropna: true
+
+  - name: "credit_card"
+    kaggle_dataset: "arjunbhasin2013/ccdata"
+    download: true
+    target_column: null
+    feature_columns: null
+    preprocessing:
+      drop_columns: ["CUST_ID"]
+      dropna: true
+
+  - name: "iris"
+    download: false
+    target_column: null
+    feature_columns: null
+    preprocessing: {}
