@@ -8,7 +8,14 @@ handle everything else.
 
 from __future__ import annotations
 
-from sklearn.cluster import DBSCAN, KMeans
+from sklearn.cluster import (
+    DBSCAN,
+    OPTICS,
+    AgglomerativeClustering,
+    Birch,
+    KMeans,
+    SpectralClustering,
+)
 from sklearn.decomposition import PCA
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.linear_model import ElasticNet, Lasso, LinearRegression, Ridge
@@ -31,11 +38,29 @@ REGRESSION_MODELS: dict[str, type] = {
 }
 
 # Clustering estimators ---------------------------------------------------
-CLUSTERING_MODELS: dict[str, type] = {
+# HDBSCAN is optional (added to public sklearn.cluster in 1.3); the value can
+# be None until the lazy import below succeeds.
+CLUSTERING_MODELS: dict[str, type | None] = {
     "kmeans": KMeans,
     "dbscan": DBSCAN,
     "gmm": GaussianMixture,
+    # M2 — Clustering maturity
+    "agglomerative": AgglomerativeClustering,
+    "spectral": SpectralClustering,
+    "birch": Birch,
+    "optics": OPTICS,
+    "hdbscan": None,  # populated lazily below — sklearn >= 1.3 required
 }
+
+
+# HDBSCAN is imported lazily so the package works on older sklearn (< 1.3).
+# Accessing get_model("hdbscan") will raise a clear ImportError when unavailable.
+try:
+    from sklearn.cluster import HDBSCAN  # type: ignore[attr-defined]
+
+    CLUSTERING_MODELS["hdbscan"] = HDBSCAN
+except ImportError:  # pragma: no cover
+    pass
 
 # Dimensionality reducers -------------------------------------------------
 # UMAP is optional (umap-learn may be absent); the value can be None until

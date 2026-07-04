@@ -54,6 +54,7 @@ from .optimization import (
     OptunaRunner,
     make_clustering_objective,
     make_cv_splitter,
+    make_model_selection_objective,
     make_regression_objective,
 )
 from .pipelines import BasePipeline, get_pipeline
@@ -97,6 +98,7 @@ __all__ = [
     "make_cv_splitter",
     "make_regression_objective",
     "make_clustering_objective",
+    "make_model_selection_objective",
     # evaluation
     "regression_metrics",
     "clustering_metrics",

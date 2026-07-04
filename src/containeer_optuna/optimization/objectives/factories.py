@@ -122,6 +122,51 @@ def make_regression_objective(
     return objective
 
 
+def _evaluate_clustering_fold(
+    pipeline: Any,
+    X_fold: np.ndarray,
+) -> dict[str, float] | None:
+    """Fit-predict a clustering pipeline on a fold and return its metrics.
+
+    Uses ``fit_predict`` (not ``fit`` + ``predict``) because most clusterers
+    (DBSCAN, HDBSCAN, Agglomerative, Spectral, OPTICS) don't implement
+    ``predict`` — only ``fit_predict``. The pipeline's ``fit_predict``
+    delegates correctly to the final estimator.
+
+    Noise points (label ``-1``) are stripped before computing metrics. Folds
+    with fewer than 2 surviving clusters return ``None`` (skipped by the caller).
+
+    Args:
+        pipeline: An unfitted sklearn Pipeline ending in a clusterer.
+        X_fold: The fold's feature matrix.
+
+    Returns:
+        A metrics dict (silhouette, calinski_harabasz, davies_bouldin,
+        n_clusters) or ``None`` if the fold is degenerate.
+    """
+    try:
+        labels = pipeline.fit_predict(X_fold)
+    except Exception:
+        # Degenerate params (e.g. GMM singular covariance, Spectral eigen failure).
+        return None
+
+    labels = np.asarray(labels)
+    # Strip DBSCAN/HDBSCAN/OPTICS noise (label -1).
+    non_noise = labels != -1
+    if non_noise.sum() < 2:
+        return None
+    labels_clean = labels[non_noise]
+    X_clean = X_fold[non_noise]
+
+    if len(set(labels_clean.tolist())) < 2:
+        return None
+
+    try:
+        return clustering_metrics(X_clean, labels_clean)
+    except Exception:
+        return None
+
+
 def make_clustering_objective(
     config: ExperimentConfig,
     X: np.ndarray,
@@ -131,13 +176,19 @@ def make_clustering_objective(
     Each trial:
 
     1. Builds the full ``scaler? -> reducer? -> clusterer`` pipeline.
-    2. Iterates KFold splits. On each fold, fits the pipeline on the train
-       split and produces labels on the test split *through the full pipeline*
-       (so scaler/reducer are applied consistently — fixes the notebook bug).
-    3. Strips DBSCAN noise points (label ``-1``) before computing metrics.
-    4. Skips folds with fewer than 2 distinct labels (metrics are undefined).
+    2. Iterates CV splits. On each fold, calls ``fit_predict`` on the fold's
+       data and scores the resulting labels (clusterers don't generalize
+       labels to unseen points, so the standard stability-CV pattern is
+       fit-predict per fold, not train/test label split).
+    3. Strips noise points (label ``-1``) before computing metrics.
+    4. Skips folds with fewer than 2 distinct surviving labels.
     5. Returns mean Silhouette across surviving folds; stores mean
        Calinski-Harabasz and Davies-Bouldin as ``trial.user_attrs``.
+
+    This implementation fixes the latent bug where the previous version used
+    ``pipeline.fit(X_train)`` + ``pipeline.predict(X_test)``: that broke
+    silently for every clusterer without ``predict()`` (DBSCAN, HDBSCAN,
+    Agglomerative, Spectral, OPTICS), making their trials always return -1.0.
 
     If no fold yields a valid score, the trial returns ``-1.0`` (a sentinel
     worse than any valid Silhouette, which is in [-1, 1]).
@@ -155,8 +206,10 @@ def make_clustering_objective(
     def objective(trial: Any) -> float:
         silhouettes, chs, dbs = [], [], []
 
-        for train_idx, test_idx in splitter.split(X_arr):
-            X_train, X_test = X_arr[train_idx], X_arr[test_idx]
+        for train_idx, _test_idx in splitter.split(X_arr):
+            # Clustering stability CV: fit-predict on the TRAIN fold.
+            # (Labels are only meaningful on data the model has seen.)
+            X_fold = X_arr[train_idx]
 
             pipeline = get_pipeline(
                 model=config.model,
@@ -167,26 +220,8 @@ def make_clustering_objective(
                 random_state=config.random_state,
             )
 
-            try:
-                pipeline.fit(X_train)
-                labels = pipeline.predict(X_test)
-            except Exception:
-                # Some param combos are degenerate (e.g. GMM singular covariance).
-                return -1.0
-
-            # Strip DBSCAN noise: metrics treat -1 as a cluster label, which is wrong.
-            non_noise = labels != -1
-            if non_noise.sum() < 2:
-                continue
-            labels_clean = labels[non_noise]
-            X_test_clean = X_test[non_noise]
-
-            if len(set(labels_clean.tolist())) < 2:
-                continue
-
-            try:
-                m = clustering_metrics(X_test_clean, labels_clean)
-            except Exception:
+            m = _evaluate_clustering_fold(pipeline, X_fold)
+            if m is None:
                 continue
 
             silhouettes.append(m["silhouette"])
@@ -204,8 +239,103 @@ def make_clustering_objective(
     return objective
 
 
+def make_model_selection_objective(
+    config: ExperimentConfig,
+    X: Any,
+    y: Any = None,
+) -> Callable[[Any], float]:
+    """Build an Optuna objective that searches across model families.
+
+    Each trial samples ``model_type`` categorically from ``config.models``,
+    then builds the chosen model with its own namespaced ``param_space`` (a
+    conditional search space — only the active model's params are suggested).
+    The evaluation is then task-appropriate:
+
+    * **regression**: ``cross_validate`` with the ``config.metric`` scorer.
+    * **clustering**: the ``fit_predict`` CV stability loop.
+
+    The sampled ``model_type`` is stored as a ``user_attr`` so the Optuna
+    dashboard / study summary reveals which family won.
+
+    Args:
+        config: Experiment config. ``config.models`` must be a non-empty list.
+        X: Feature matrix (DataFrame when ``feature_sets`` is set).
+        y: Target vector for regression (None for clustering).
+
+    Returns:
+        A function ``objective(trial) -> float``.
+
+    Raises:
+        ValueError: If ``config.models`` is empty/None.
+    """
+    if not config.models:
+        raise ValueError(
+            "make_model_selection_objective requires config.models to be a non-empty list"
+        )
+
+    models = list(config.models)
+    task = config.task
+    X_arr = np.asarray(X) if (task == "clustering" or not config.feature_sets) else X
+    metric = getattr(config, "metric", None) or "r2"
+    scorer, _direction = get_regression_scorer(metric) if task == "regression" else (None, None)
+    splitter = make_cv_splitter(config.cv)
+
+    def objective(trial: Any) -> float:
+        model_type = trial.suggest_categorical("model_type", models)
+        trial.set_user_attr("model_type", model_type)
+
+        if task == "clustering":
+            silhouettes, chs, dbs = [], [], []
+            for train_idx, _test_idx in splitter.split(X_arr):
+                X_fold = X_arr[train_idx]
+                pipeline = get_pipeline(
+                    model=model_type,
+                    scaler=config.scaler,
+                    reducer=config.reducer,
+                    trial=trial,
+                    namespace=model_type,
+                    random_state=config.random_state,
+                )
+                m = _evaluate_clustering_fold(pipeline, X_fold)
+                if m is None:
+                    continue
+                silhouettes.append(m["silhouette"])
+                chs.append(m["calinski_harabasz"])
+                dbs.append(m["davies_bouldin"])
+            if not silhouettes:
+                return -1.0
+            trial.set_user_attr("mean_calinski_harabasz", float(np.mean(chs)))
+            trial.set_user_attr("mean_davies_bouldin", float(np.mean(dbs)))
+            return float(np.mean(silhouettes))
+
+        # regression
+        feature_sets = config.feature_sets
+        if feature_sets:
+            set_name = trial.suggest_categorical("feature_set", list(feature_sets.keys()))
+            X_trial = X[feature_sets[set_name]]
+            trial.set_user_attr("feature_set", set_name)
+        else:
+            X_trial = X_arr
+
+        pipeline = get_pipeline(
+            model=model_type,
+            scaler=config.scaler,
+            reducer=config.reducer,
+            trial=trial,
+            namespace=model_type,
+            random_state=config.random_state,
+        )
+        cv_results = cross_validate(pipeline, X_trial, y, cv=splitter, scoring=scorer)
+        mean_primary = float(np.mean(cv_results["test_score"]))
+        trial.set_user_attr(f"mean_{metric}", mean_primary)
+        return mean_primary
+
+    return objective
+
+
 __all__ = [
     "make_cv_splitter",
     "make_regression_objective",
     "make_clustering_objective",
+    "make_model_selection_objective",
 ]

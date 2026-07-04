@@ -203,3 +203,36 @@ def test_load_diabetes_experiment_yaml(experiments_dir: Path):
     assert cfg.task == "regression"
     assert cfg.model == "random_forest"
     assert cfg.metric == "r2"
+
+
+# --- M2: models field (model-selection) --------------------------------
+
+
+def test_models_field_accepted():
+    cfg = ExperimentConfig(
+        name="e",
+        task="clustering",
+        dataset="iris",
+        model="kmeans",
+        models=["kmeans", "agglomerative"],
+        optimization=OptimizationConfig(),
+    )
+    assert cfg.models == ["kmeans", "agglomerative"]
+
+
+def test_models_field_defaults_none():
+    cfg = ExperimentConfig(
+        name="e",
+        task="clustering",
+        dataset="iris",
+        model="kmeans",
+        optimization=OptimizationConfig(),
+    )
+    assert cfg.models is None
+
+
+def test_load_clustering_model_selection_yaml(experiments_dir: Path):
+    cfg = load_config(experiments_dir / "clustering_model_selection.yaml")
+    assert cfg.models is not None
+    assert "kmeans" in cfg.models
+    assert "agglomerative" in cfg.models

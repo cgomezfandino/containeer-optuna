@@ -358,6 +358,157 @@ GMM_CARD = ModelCard(
 )
 
 
+# --- M2: Clustering maturity --------------------------------------------
+
+HDBSCAN_CARD = ModelCard(
+    name="hdbscan",
+    kind="clustering",
+    summary="Hierarchical Density-Based Clustering — robust to varying cluster densities.",
+    when_to_use=(
+        "When clusters have different densities (where DBSCAN struggles) and "
+        "you want density-based clustering that auto-discovers cluster counts. "
+        "Strong default for exploratory clustering of unknown structure."
+    ),
+    pros=[
+        "Handles clusters of widely varying densities (DBSCAN's main weakness).",
+        "No need to set the number of clusters; discovered automatically.",
+        "Produces a cluster hierarchy (can extract flat labels at multiple "
+        "granularities via cluster_selection_method).",
+        "Robust to noise and outliers (labels them -1).",
+        "Only two main hyperparameters (min_cluster_size, min_samples).",
+    ],
+    cons=[
+        "Requires sklearn >= 1.3 (not available on older installs).",
+        "Sensitive to min_cluster_size — too high merges real clusters, too "
+        "low creates spurious ones.",
+        "Memory O(n^2) in the worst case for the mutual-reachability graph.",
+        "Noise points must be stripped before computing Silhouette/CH/DB.",
+        "Cannot predict labels for new unseen points (no predict method).",
+    ],
+    assumptions=["Clusters are dense regions separated by sparse regions", "Features scaled"],
+    complexity="O(n_samples^2) worst case; O(n_samples * log n_samples) typically",
+    key_hyperparameters=["min_cluster_size", "min_samples", "cluster_selection_method"],
+    milestone="M2",
+)
+
+AGGLOMERATIVE_CARD = ModelCard(
+    name="agglomerative",
+    kind="clustering",
+    summary="Hierarchical agglomerative clustering — builds a dendrogram bottom-up.",
+    when_to_use=(
+        "When you want a cluster hierarchy (dendrogram) or when clusters may "
+        "have arbitrary shapes linkable via a distance criterion. Good for "
+        "small-to-medium datasets where the hierarchy itself is informative."
+    ),
+    pros=[
+        "Produces a full hierarchy (dendrogram) — reveals structure at multiple resolutions.",
+        "Flexible via linkage criterion (ward / complete / average / single).",
+        "No need to specify the number of clusters at fit time (can cut the tree at any level).",
+        "Works with any pairwise distance / affinity.",
+    ],
+    cons=[
+        "O(n^3) time and O(n^2) memory in the worst case — does NOT scale to large datasets.",
+        "Irreversible: early merge mistakes cannot be undone.",
+        "ward linkage requires Euclidean distance and roughly equal cluster "
+        "sizes for best results.",
+        "single linkage suffers from chaining; complete linkage is sensitive to outliers.",
+        "Cannot predict labels for new unseen points (no predict method).",
+    ],
+    assumptions=["A meaningful pairwise distance exists", "n_samples not huge (< ~10k)"],
+    complexity="O(n_samples^3) full linkage; O(n_samples^2 * log n_samples) with efficient heap",
+    key_hyperparameters=["n_clusters", "linkage", "affinity"],
+    milestone="M2",
+)
+
+SPECTRAL_CARD = ModelCard(
+    name="spectral",
+    kind="clustering",
+    summary="Graph-based clustering via eigen-decomposition of the similarity matrix.",
+    when_to_use=(
+        "When clusters are non-convex / non-globular (e.g. concentric rings, "
+        "two moons) and KMeans fails. Strong on small datasets where pairwise "
+        "affinity is meaningful."
+    ),
+    pros=[
+        "Detects non-convex cluster shapes that KMeans cannot.",
+        "Mathematically grounded (graph Laplacian spectral decomposition).",
+        "Works with any affinity (rbf, nearest_neighbors, or precomputed).",
+        "Only needs the number of clusters (no density parameters).",
+    ],
+    cons=[
+        "O(n^3) eigen-decomposition — does NOT scale to large datasets.",
+        "Sensitive to the affinity/gamma choice; needs careful tuning.",
+        "Requires the number of clusters in advance.",
+        "Numerically unstable when the similarity graph is disconnected.",
+        "Cannot predict labels for new unseen points (no predict method).",
+    ],
+    assumptions=[
+        "A meaningful pairwise similarity (affinity) exists",
+        "n_samples not huge (< ~5k)",
+    ],
+    complexity="O(n_samples^3) for the eigen-decomposition",
+    key_hyperparameters=["n_clusters", "affinity", "gamma (for rbf)"],
+    milestone="M2",
+)
+
+BIRCH_CARD = ModelCard(
+    name="birch",
+    kind="clustering",
+    summary="Balanced Iterative Reducing and Clustering using Hierarchies — memory-efficient online clustering.",
+    when_to_use=(
+        "Large datasets where memory matters: BIRCH builds a Clustering "
+        "Feature Tree in a single pass and can cluster incrementally. A good "
+        "scaler → BIRCH → final-clusterer pipeline scales to millions of rows."
+    ),
+    pros=[
+        "Memory-efficient (summarizes data in a CF Tree).",
+        "Single-pass — scales to very large datasets.",
+        "Supports online/incremental updates (partial_fit).",
+        "One of the few non-KMeans clusterers that implements predict (can "
+        "label new points without refitting).",
+    ],
+    cons=[
+        "Sensitive to the threshold parameter (controls CF Tree granularity).",
+        "Produces spherical clusters (inherits KMeans-like geometry).",
+        "Order-dependent — the CF Tree depends on data arrival order.",
+        "Struggles with high-dimensional data (curse of dimensionality).",
+        "Less accurate than direct KMeans/HDBSCAN on small data.",
+    ],
+    assumptions=["Spherical clusters", "Features scaled", "n_features not too large"],
+    complexity="O(n_samples * n_features) single pass",
+    key_hyperparameters=["threshold", "n_clusters", "branching_factor"],
+    milestone="M2",
+)
+
+OPTICS_CARD = ModelCard(
+    name="optics",
+    kind="clustering",
+    summary="Ordering Points To Identify Clustering Structure — DBSCAN-like, but with variable density.",
+    when_to_use=(
+        "Spatial / point-cloud data where clusters have varying densities and "
+        "you want a reachability plot for visual structure analysis. A more "
+        "sophisticated alternative to DBSCAN."
+    ),
+    pros=[
+        "Handles clusters of varying density better than DBSCAN.",
+        "Produces a reachability plot — visualizes cluster hierarchy.",
+        "Does not require a global eps (xi extracts clusters automatically).",
+        "Robust to noise (labels outliers -1).",
+    ],
+    cons=[
+        "Slower than DBSCAN in practice (O(n log n) with index, O(n^2) worst).",
+        "Sensitive to min_samples and xi — needs careful Optuna tuning.",
+        "Reachability-plot interpretation is non-trivial.",
+        "Cannot predict labels for new unseen points (no predict method).",
+        "Noise points must be stripped before computing metrics.",
+    ],
+    assumptions=["Clusters are dense regions of varying density", "Features scaled"],
+    complexity="O(n_samples * log n_samples) with a spatial index, O(n_samples^2) worst case",
+    key_hyperparameters=["min_samples", "xi", "max_eps"],
+    milestone="M2",
+)
+
+
 # --- M0: Reducers --------------------------------------------------------
 
 PCA_CARD = ModelCard(
@@ -478,6 +629,12 @@ _ALL_CARDS: dict[str, ModelCard] = {
         KMEANS_CARD,
         DBSCAN_CARD,
         GMM_CARD,
+        # M2 — Clustering maturity
+        HDBSCAN_CARD,
+        AGGLOMERATIVE_CARD,
+        SPECTRAL_CARD,
+        BIRCH_CARD,
+        OPTICS_CARD,
         PCA_CARD,
         UMAP_CARD,
         STANDARD_SCALER_CARD,

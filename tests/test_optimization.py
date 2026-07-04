@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from containeer_optuna.config import CVConfig, ExperimentConfig, OptimizationConfig
 from containeer_optuna.optimization import (
@@ -209,3 +210,96 @@ def test_regression_random_forest_e2e(small_regression_data):
     assert len(study.trials) == 2
     # RF params should appear namespaced.
     assert any(k.startswith("random_forest_") for k in study.best_params)
+
+
+# --- M2: clustering fix, new models, model-selection --------------------
+
+
+def test_dbscan_fix_produces_valid_scores(small_clustering_data):
+    """REGRESSION: DBSCAN used to always score -1.0 because the objective called
+    pipeline.predict(), which DBSCAN doesn't implement. After the fit_predict
+    rewrite, DBSCAN must produce valid Silhouette scores on separable blobs."""
+    X = small_clustering_data
+    cfg = _in_memory_cfg(
+        name="dbscan_fix",
+        task="clustering",
+        dataset="iris",
+        model="dbscan",
+        scaler="standard_scaler",
+        optimization=OptimizationConfig(n_trials=4, direction="maximize"),
+    )
+    cfg.cv = CVConfig(strategy="kfold", n_splits=2)
+    runner = OptunaRunner(cfg)
+    runner.X = np.asarray(X)
+    runner.y = None
+    study = runner.run(n_trials=4, show_progress_bar=False)
+    vals = [t.value for t in study.trials if t.value is not None]
+    # At least one trial must NOT be the -1.0 sentinel (the fix works).
+    assert any(v != -1.0 for v in vals), f"DBSCAN still broken: all values={vals}"
+
+
+@pytest.mark.parametrize("model", ["kmeans", "agglomerative", "spectral", "birch", "optics"])
+def test_m2_clustering_models_e2e(small_clustering_data, model):
+    """Each new clustering model must run end-to-end and produce a study."""
+    X = small_clustering_data
+    cfg = _in_memory_cfg(
+        name=f"clu_{model}",
+        task="clustering",
+        dataset="iris",
+        model=model,
+        scaler="standard_scaler",
+        optimization=OptimizationConfig(n_trials=2, direction="maximize"),
+    )
+    cfg.cv = CVConfig(strategy="kfold", n_splits=2)
+    runner = OptunaRunner(cfg)
+    runner.X = np.asarray(X)
+    runner.y = None
+    study = runner.run(n_trials=2, show_progress_bar=False)
+    assert len(study.trials) == 2
+
+
+def test_clustering_model_selection_e2e(small_clustering_data):
+    """Model-selection mode: search across clustering families."""
+    X = small_clustering_data
+    cfg = _in_memory_cfg(
+        name="clu_ms",
+        task="clustering",
+        dataset="iris",
+        model="kmeans",  # fallback
+        models=["kmeans", "agglomerative", "birch"],
+        scaler="standard_scaler",
+        optimization=OptimizationConfig(n_trials=4, direction="maximize"),
+    )
+    cfg.cv = CVConfig(strategy="kfold", n_splits=2)
+    runner = OptunaRunner(cfg)
+    runner.X = np.asarray(X)
+    runner.y = None
+    study = runner.run(n_trials=4, show_progress_bar=False)
+    assert len(study.trials) == 4
+    # Every trial samples model_type; best_params includes it.
+    sampled = {t.params.get("model_type") for t in study.trials}
+    assert sampled.issubset({"kmeans", "agglomerative", "birch"})
+    assert len(sampled) >= 1
+    assert "model_type" in study.best_params
+
+
+def test_regression_model_selection_e2e(small_regression_data):
+    """Model-selection also works for regression (M1 models)."""
+    X, y = small_regression_data
+    cfg = _in_memory_cfg(
+        name="reg_ms",
+        task="regression",
+        dataset="diabetes",
+        model="ridge",
+        models=["ridge", "random_forest"],
+        scaler="standard_scaler",
+        metric="r2",
+        optimization=OptimizationConfig(n_trials=2, direction="maximize"),
+    )
+    cfg.cv = CVConfig(strategy="shuffle_split", n_splits=2)
+    runner = OptunaRunner(cfg)
+    runner.X = np.asarray(X)
+    runner.y = np.asarray(y)
+    study = runner.run(n_trials=2, show_progress_bar=False)
+    assert len(study.trials) == 2
+    assert "model_type" in study.best_params

@@ -121,6 +121,11 @@ class ExperimentConfig(BaseModel):
             When set, the regression objective samples a feature-set name
             categorically per trial and slices ``X`` to that subset. None
             disables feature-set selection (use all columns).
+        models: List of model names for model-selection-as-categorical (M2).
+            When set (non-empty), the runner searches across the listed model
+            families: each trial samples ``model_type`` categorically and
+            builds the chosen model with its own namespaced param_space. Works
+            for both regression and clustering. None uses the single ``model``.
     """
 
     name: str
@@ -137,6 +142,7 @@ class ExperimentConfig(BaseModel):
     reducer: str | None = None
     metric: RegressionMetric | None = None
     feature_sets: dict[str, list[str]] | None = None
+    models: list[str] | None = None
 
     @model_validator(mode="after")
     def _default_study_name(self) -> ExperimentConfig:

@@ -200,6 +200,86 @@ models:
         type: "categorical"
         choices: ["full", "tied", "diag", "spherical"]
 
+  # --- M2: Clustering maturity ------------------------------------------
+
+  - name: "hdbscan"
+    type: "clustering"
+    default_params:
+      min_cluster_size: 5
+      min_samples: null
+      cluster_selection_method: "eom"
+    param_space:
+      min_cluster_size:
+        type: "int"
+        low: 2
+        high: 20
+      min_samples:
+        type: "categorical"
+        choices: ["None", 5, 10]
+      cluster_selection_method:
+        type: "categorical"
+        choices: ["eom", "leaf"]
+
+  - name: "agglomerative"
+    type: "clustering"
+    default_params:
+      n_clusters: 3
+      linkage: "ward"
+    param_space:
+      n_clusters:
+        type: "int"
+        low: 2
+        high: 10
+      linkage:
+        type: "categorical"
+        choices: ["ward", "complete", "average", "single"]
+
+  - name: "spectral"
+    type: "clustering"
+    default_params:
+      n_clusters: 3
+      affinity: "rbf"
+      random_state: 42
+      n_init: 10
+    param_space:
+      n_clusters:
+        type: "int"
+        low: 2
+        high: 10
+      affinity:
+        type: "categorical"
+        choices: ["rbf", "nearest_neighbors"]
+
+  - name: "birch"
+    type: "clustering"
+    default_params:
+      n_clusters: 3
+      threshold: 0.5
+    param_space:
+      n_clusters:
+        type: "int"
+        low: 2
+        high: 10
+      threshold:
+        type: "float"
+        low: 0.1
+        high: 1.0
+
+  - name: "optics"
+    type: "clustering"
+    default_params:
+      min_samples: 5
+      xi: 0.05
+    param_space:
+      min_samples:
+        type: "int"
+        low: 2
+        high: 20
+      xi:
+        type: "float"
+        low: 0.01
+        high: 0.5
+
   - name: "pca"
     type: "reducer"
     default_params:
