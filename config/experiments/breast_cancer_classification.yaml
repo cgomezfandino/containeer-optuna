@@ -1,0 +1,23 @@
+name: breast_cancer_classification
+task: classification
+dataset: breast_cancer
+model: logistic_regression
+metric: accuracy
+scaler: standard_scaler
+reducer: null
+random_state: 42
+
+cv:
+  strategy: stratified_kfold
+  n_splits: 5
+  random_state: 42
+
+optimization:
+  enabled: true
+  n_trials: 50
+  direction: maximize
+  study_name: breast_cancer_classification
+  storage: sqlite:///optuna_studies.db
+  load_if_exists: true
+  sampler: tpe
+  pruner: null

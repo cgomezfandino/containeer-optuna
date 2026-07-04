@@ -35,12 +35,24 @@ TaskType = Literal["regression", "clustering", "classification"]
 # - mse / rmse / mae: error metrics (lower is better, minimize).
 RegressionMetric = Literal["r2", "mse", "rmse", "mae"]
 
-# Metric → optimization direction map (M1).
+# Pluggable classification optimization metrics (M4).
+# All classification metrics are higher-is-better (maximize).
+# - f1, roc_auc: binary-only (require 0/1 targets or pos_label).
+# - f1_weighted, roc_auc_ovr: multiclass-safe.
+ClassificationMetric = Literal["accuracy", "f1", "f1_weighted", "roc_auc", "roc_auc_ovr"]
+
+# Metric → optimization direction map (M1 regression + M4 classification).
 METRIC_DIRECTION: dict[str, str] = {
     "r2": "maximize",
     "mse": "minimize",
     "rmse": "minimize",
     "mae": "minimize",
+    # M4 — classification (all maximize)
+    "accuracy": "maximize",
+    "f1": "maximize",
+    "f1_weighted": "maximize",
+    "roc_auc": "maximize",
+    "roc_auc_ovr": "maximize",
 }
 
 
@@ -140,7 +152,7 @@ class ExperimentConfig(BaseModel):
     random_state: int = 42
     scaler: str | None = None
     reducer: str | None = None
-    metric: RegressionMetric | None = None
+    metric: RegressionMetric | ClassificationMetric | None = None
     feature_sets: dict[str, list[str]] | None = None
     models: list[str] | None = None
 
@@ -159,6 +171,10 @@ class ExperimentConfig(BaseModel):
             # Clustering has no target to stratify/shuffle on; KFold over rows
             # is the canonical stability-evaluation strategy.
             self.cv.strategy = "kfold"
+        if self.task == "classification" and self.cv.strategy == "shuffle_split":
+            # Classification benefits from stratified folds to preserve class
+            # proportions, especially with imbalanced classes.
+            self.cv.strategy = "stratified_kfold"
         # When a regression metric is set, it dictates the optimization
         # direction (r2 → maximize; mse/rmse/mae → minimize). The metric is the
         # single source of truth for direction; users who want to flip the sign

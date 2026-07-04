@@ -38,3 +38,19 @@ def small_clustering_data():
     b = rng.normal([5, 5], 0.1, size=(30, 2))
     c = rng.normal([5, 0], 0.1, size=(30, 2))
     return np.vstack([a, b, c])
+
+
+@pytest.fixture
+def small_classification_data():
+    """A tiny deterministic binary classification dataset (0/1 targets)."""
+    from sklearn.datasets import make_classification
+
+    X, y = make_classification(
+        n_samples=80,
+        n_features=6,
+        n_informative=4,
+        n_redundant=1,
+        n_classes=2,
+        random_state=42,
+    )
+    return X, y

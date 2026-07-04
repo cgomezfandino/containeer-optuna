@@ -265,3 +265,57 @@ def test_factor_analysis_with_sampled_params():
     trial = _FakeTrial([3])
     est = get_model("factor_analysis", trial=trial, namespace="factor_analysis")
     assert est.n_components == 3
+
+
+# --- M4: classification ------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "name,cls_name",
+    [
+        ("logistic_regression", "LogisticRegression"),
+        ("knn", "KNeighborsClassifier"),
+        ("svc", "SVC"),
+        ("decision_tree_classifier", "DecisionTreeClassifier"),
+    ],
+)
+def test_m4_classifiers_instantiate(name, cls_name):
+    est = get_model(name)
+    assert type(est).__name__ == cls_name
+
+
+def test_logistic_regression_with_sampled_params():
+    # C (float), penalty (categorical), solver (categorical)
+    trial = _FakeTrial([0.5, "l1", "saga"])
+    est = get_model("logistic_regression", trial=trial, namespace="logistic_regression")
+    assert est.C == 0.5
+    assert est.penalty == "l1"
+    assert est.solver == "saga"
+
+
+def test_knn_with_sampled_params():
+    # n_neighbors (int), weights (categorical), p (categorical)
+    trial = _FakeTrial([7, "distance", 1])
+    est = get_model("knn", trial=trial, namespace="knn")
+    assert est.n_neighbors == 7
+    assert est.weights == "distance"
+    assert est.p == 1
+
+
+def test_svc_classifier_with_sampled_params():
+    # C (float), kernel (categorical), gamma (categorical)
+    trial = _FakeTrial([10.0, "linear", "auto"])
+    est = get_model("svc", trial=trial, namespace="svc")
+    assert est.C == 10.0
+    assert est.kernel == "linear"
+    assert est.gamma == "auto"
+
+
+def test_decision_tree_classifier_none_coercion():
+    """max_depth='None' must coerce to Python None."""
+    # max_depth (categorical), min_samples_split (int), criterion (categorical)
+    trial = _FakeTrial(["None", 5, "entropy"])
+    est = get_model("decision_tree_classifier", trial=trial, namespace="dtc")
+    assert est.max_depth is None
+    assert est.min_samples_split == 5
+    assert est.criterion == "entropy"

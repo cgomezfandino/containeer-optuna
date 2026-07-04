@@ -40,11 +40,13 @@ from .config import (
 )
 from .data import BaseDataset, YamlDatasetLoader, get_dataset
 from .evaluation import (
+    CLASSIFICATION_SCORERS,
     REGRESSION_SCORERS,
     ModelCard,
     all_model_cards,
     card_to_dict,
     clustering_metrics,
+    get_classification_scorer,
     get_model_card,
     get_regression_scorer,
     plot_embedding_2d,
@@ -54,6 +56,7 @@ from .evaluation import (
 from .models import MODEL_CLASSES, BaseModel, get_model, suggest_params
 from .optimization import (
     OptunaRunner,
+    make_classification_objective,
     make_clustering_objective,
     make_cv_splitter,
     make_model_selection_objective,
@@ -99,13 +102,16 @@ __all__ = [
     "OptunaRunner",
     "make_cv_splitter",
     "make_regression_objective",
+    "make_classification_objective",
     "make_clustering_objective",
     "make_model_selection_objective",
     # evaluation
     "regression_metrics",
     "clustering_metrics",
     "REGRESSION_SCORERS",
+    "CLASSIFICATION_SCORERS",
     "get_regression_scorer",
+    "get_classification_scorer",
     "ModelCard",
     "get_model_card",
     "all_model_cards",

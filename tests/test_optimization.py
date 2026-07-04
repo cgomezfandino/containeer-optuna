@@ -375,3 +375,76 @@ def test_plot_best_embedding_requires_clustering(small_regression_data):
     runner.run(n_trials=1, show_progress_bar=False)
     with pytest.raises(ValueError, match="clustering"):
         runner.plot_best_embedding()
+
+
+# --- M4: classification ------------------------------------------------
+
+
+def test_classification_e2e_logistic_regression(small_classification_data):
+    """LogisticRegression must run end-to-end on synthetic binary data."""
+    X, y = small_classification_data
+    cfg = _in_memory_cfg(
+        name="clf_lr",
+        task="classification",
+        dataset="breast_cancer",
+        model="logistic_regression",
+        scaler="standard_scaler",
+        metric="accuracy",
+        optimization=OptimizationConfig(n_trials=2, direction="maximize"),
+    )
+    cfg.cv = CVConfig(strategy="stratified_kfold", n_splits=3)
+    runner = OptunaRunner(cfg)
+    runner.X = np.asarray(X)
+    runner.y = np.asarray(y)
+    study = runner.run(n_trials=2, show_progress_bar=False)
+    assert len(study.trials) == 2
+    assert study.best_value > 0.5  # better than chance on separable data
+    assert any(k.startswith("logistic_regression_") for k in study.best_params)
+
+
+@pytest.mark.parametrize(
+    "model",
+    ["logistic_regression", "knn", "svc", "decision_tree_classifier"],
+)
+def test_m4_classifiers_e2e(small_classification_data, model):
+    """Each classifier must run end-to-end and produce a study."""
+    X, y = small_classification_data
+    cfg = _in_memory_cfg(
+        name=f"clf_{model}",
+        task="classification",
+        dataset="breast_cancer",
+        model=model,
+        scaler="standard_scaler",
+        metric="accuracy",
+        optimization=OptimizationConfig(n_trials=2, direction="maximize"),
+    )
+    cfg.cv = CVConfig(strategy="stratified_kfold", n_splits=3)
+    runner = OptunaRunner(cfg)
+    runner.X = np.asarray(X)
+    runner.y = np.asarray(y)
+    study = runner.run(n_trials=2, show_progress_bar=False)
+    assert len(study.trials) == 2
+
+
+def test_classification_model_selection_e2e(small_classification_data):
+    """Model-selection across classifier families."""
+    X, y = small_classification_data
+    cfg = _in_memory_cfg(
+        name="clf_ms",
+        task="classification",
+        dataset="breast_cancer",
+        model="logistic_regression",
+        models=["logistic_regression", "knn", "decision_tree_classifier"],
+        scaler="standard_scaler",
+        metric="accuracy",
+        optimization=OptimizationConfig(n_trials=3, direction="maximize"),
+    )
+    cfg.cv = CVConfig(strategy="stratified_kfold", n_splits=3)
+    runner = OptunaRunner(cfg)
+    runner.X = np.asarray(X)
+    runner.y = np.asarray(y)
+    study = runner.run(n_trials=3, show_progress_bar=False)
+    assert len(study.trials) == 3
+    sampled = {t.params.get("model_type") for t in study.trials}
+    assert sampled.issubset({"logistic_regression", "knn", "decision_tree_classifier"})
+    assert "model_type" in study.best_params

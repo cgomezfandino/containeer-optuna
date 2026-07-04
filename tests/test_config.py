@@ -239,3 +239,53 @@ def test_load_clustering_model_selection_yaml(experiments_dir: Path):
     assert cfg.models is not None
     assert "kmeans" in cfg.models
     assert "agglomerative" in cfg.models
+
+
+# --- M4: classification config defaults --------------------------------
+
+
+def test_classification_defaults_to_stratified_kfold():
+    cfg = ExperimentConfig(
+        name="e",
+        task="classification",
+        dataset="breast_cancer",
+        model="logistic_regression",
+        optimization=OptimizationConfig(),
+    )
+    assert cfg.cv.strategy == "stratified_kfold"
+
+
+def test_classification_metric_accuracy_derives_maximize():
+    cfg = ExperimentConfig(
+        name="e",
+        task="classification",
+        dataset="breast_cancer",
+        model="logistic_regression",
+        metric="accuracy",
+        optimization=OptimizationConfig(),
+    )
+    assert cfg.optimization.direction == "maximize"
+
+
+def test_classification_metric_f1_weighted_derives_maximize():
+    cfg = ExperimentConfig(
+        name="e",
+        task="classification",
+        dataset="wine",
+        model="svc",
+        metric="f1_weighted",
+        optimization=OptimizationConfig(),
+    )
+    assert cfg.optimization.direction == "maximize"
+
+
+def test_classification_metric_roc_auc_ovr_derives_maximize():
+    cfg = ExperimentConfig(
+        name="e",
+        task="classification",
+        dataset="wine",
+        model="logistic_regression",
+        metric="roc_auc_ovr",
+        optimization=OptimizationConfig(),
+    )
+    assert cfg.optimization.direction == "maximize"

@@ -29,7 +29,11 @@ import numpy as np
 from sklearn.model_selection import KFold, ShuffleSplit, StratifiedKFold, cross_validate
 
 from ...config import CVConfig, ExperimentConfig
-from ...evaluation.metrics import clustering_metrics, get_regression_scorer
+from ...evaluation.metrics import (
+    clustering_metrics,
+    get_classification_scorer,
+    get_regression_scorer,
+)
 from ...pipelines import get_pipeline
 
 
@@ -116,6 +120,57 @@ def make_regression_objective(
 
         # Store the primary metric as a user_attr (sign-adjusted to be
         # interpretable: r2 as-is, errors negated back to positive).
+        trial.set_user_attr(f"mean_{metric}", mean_primary)
+        return mean_primary
+
+    return objective
+
+
+def make_classification_objective(
+    config: ExperimentConfig,
+    X: Any,
+    y: Any,
+) -> Callable[[Any], float]:
+    """Build a classification Optuna objective (mean CV primary metric).
+
+    Mirrors :func:`make_regression_objective` but uses classification scorers.
+    The metric is pluggable via ``config.metric`` (M4). When unset, falls back
+    to ``"accuracy"``. When ``config.feature_sets`` is set, a feature subset is
+    sampled categorically per trial.
+
+    Args:
+        config: The experiment config (drives pipeline assembly + CV + metric).
+        X: Feature matrix (DataFrame when ``config.feature_sets`` is set).
+        y: Target vector (class labels).
+
+    Returns:
+        A function ``objective(trial) -> float`` returning the mean CV value
+        of the primary classification metric.
+    """
+    splitter = make_cv_splitter(config.cv)
+    metric = config.metric or "accuracy"
+    scorer, _direction = get_classification_scorer(metric)
+    feature_sets = config.feature_sets
+
+    def objective(trial: Any) -> float:
+        if feature_sets:
+            set_name = trial.suggest_categorical("feature_set", list(feature_sets.keys()))
+            cols = feature_sets[set_name]
+            X_trial = X[cols] if hasattr(X, "loc") else X
+            trial.set_user_attr("feature_set", set_name)
+        else:
+            X_trial = X
+
+        pipeline = get_pipeline(
+            model=config.model,
+            scaler=config.scaler,
+            reducer=config.reducer,
+            trial=trial,
+            namespace=config.model,
+            random_state=config.random_state,
+        )
+        cv_results = cross_validate(pipeline, X_trial, y, cv=splitter, scoring=scorer)
+        mean_primary = float(np.mean(cv_results["test_score"]))
         trial.set_user_attr(f"mean_{metric}", mean_primary)
         return mean_primary
 
@@ -276,8 +331,15 @@ def make_model_selection_objective(
     models = list(config.models)
     task = config.task
     X_arr = np.asarray(X) if (task == "clustering" or not config.feature_sets) else X
-    metric = getattr(config, "metric", None) or "r2"
-    scorer, _direction = get_regression_scorer(metric) if task == "regression" else (None, None)
+    if task == "regression":
+        metric = config.metric or "r2"
+        scorer, _direction = get_regression_scorer(metric)
+    elif task == "classification":
+        metric = config.metric or "accuracy"
+        scorer, _direction = get_classification_scorer(metric)
+    else:
+        metric = None  # clustering: no scorer
+        scorer = None
     splitter = make_cv_splitter(config.cv)
 
     def objective(trial: Any) -> float:
@@ -308,7 +370,7 @@ def make_model_selection_objective(
             trial.set_user_attr("mean_davies_bouldin", float(np.mean(dbs)))
             return float(np.mean(silhouettes))
 
-        # regression
+        # regression or classification (both supervised, both use cross_validate)
         feature_sets = config.feature_sets
         if feature_sets:
             set_name = trial.suggest_categorical("feature_set", list(feature_sets.keys()))

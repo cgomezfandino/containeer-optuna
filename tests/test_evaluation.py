@@ -175,3 +175,47 @@ def test_plot_embedding_2d_rejects_non_2d():
 
     with pytest.raises(ValueError, match="must be"):
         plot_embedding_2d(np.zeros((10, 3)))
+
+
+# --- M4: classification scorers + cards --------------------------------
+
+
+def test_m4_model_cards_present():
+    cards = {c.name for c in all_model_cards()}
+    for m in ["logistic_regression", "knn", "svc", "decision_tree_classifier"]:
+        assert m in cards
+
+
+def test_m4_cards_marked_m4_milestone():
+    for name in ["logistic_regression", "knn", "svc", "decision_tree_classifier"]:
+        assert get_model_card(name).milestone == "M4"
+
+
+def test_classification_scorers_known():
+    from containeer_optuna.evaluation import CLASSIFICATION_SCORERS
+
+    assert set(CLASSIFICATION_SCORERS) == {
+        "accuracy",
+        "f1",
+        "f1_weighted",
+        "roc_auc",
+        "roc_auc_ovr",
+    }
+
+
+def test_get_classification_scorer_returns_scorer_and_direction():
+    from containeer_optuna.evaluation import get_classification_scorer
+
+    scorer, direction = get_classification_scorer("accuracy")
+    assert direction == "maximize"
+    assert callable(scorer)
+
+    scorer, direction = get_classification_scorer("f1_weighted")
+    assert direction == "maximize"
+
+
+def test_get_classification_scorer_unknown_raises():
+    from containeer_optuna.evaluation import get_classification_scorer
+
+    with pytest.raises(ValueError, match="Unknown classification metric"):
+        get_classification_scorer("nope")

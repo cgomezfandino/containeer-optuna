@@ -72,6 +72,7 @@ nav:
   - Model Cards:
       - Overview: model_cards/index.md
       - Regression: model_cards/regression.md
+      - Classification: model_cards/classification.md
       - Clustering: model_cards/clustering.md
       - Reducers: model_cards/reducers.md
       - Scalers: model_cards/scalers.md

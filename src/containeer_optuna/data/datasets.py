@@ -264,6 +264,10 @@ _DATASET_REGISTRY: dict[str, type] = {
     "iris": YamlDatasetLoader,
     # M1 — bundled regression dataset (no download, ideal for CI/tutorials)
     "diabetes": YamlDatasetLoader,
+    # M4 — bundled classification datasets
+    "breast_cancer": YamlDatasetLoader,
+    "wine": YamlDatasetLoader,
+    "iris_classification": YamlDatasetLoader,
 }
 
 
