@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased] — M5 — Statistics
+## [0.6.0] — M5 — Statistics
 
 ### Added
 - **`statistics/` subpackage** — hypothesis tests, normality tests,

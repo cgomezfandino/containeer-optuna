@@ -22,7 +22,7 @@ Public API:
     ModelCard, get_model_card, all_model_cards.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.6.0"
 __author__ = "Carlos Gomez"
 __email__ = "cgomezfandino@example.com"
 

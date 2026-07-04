@@ -13,7 +13,7 @@ Loads the YAML, runs the Optuna study, prints the best trial summary.
 ## `list-models`
 
 ```bash
-containeer-optuna list-models [--type clustering|regression|reducer|scaler]
+containeer-optuna list-models [--type clustering|regression|classification|reducer|scaler]
 ```
 
 ## `list-datasets`
@@ -36,3 +36,17 @@ Scaffolds a new experiment YAML.
 ## `dashboard`
 
 Prints the `optuna-dashboard` command for the given storage URL.
+
+## `stats` — Statistical analysis (M5)
+
+A subcommand group for quick exploratory analysis from the terminal:
+
+```bash
+containeer-optuna stats describe <dataset>
+containeer-optuna stats ttest <dataset> --group-by <col> --feature <col>
+containeer-optuna stats anova <dataset> --group-by <col> --feature <col>
+containeer-optuna stats correlation <dataset> --method pearson --threshold 0.3
+containeer-optuna stats normality <dataset> --feature <col>
+```
+
+See [Statistics](statistics.md) for the full Python API.

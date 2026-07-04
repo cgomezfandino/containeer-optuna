@@ -3,21 +3,21 @@
 [![CI](https://github.com/cgomezfandino/containeer-optuna/actions/workflows/ci.yml/badge.svg)](https://github.com/cgomezfandino/containeer-optuna/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-167-brightgreen.svg)](tests/)
 
-> **An Optuna-first data science framework** for ML, DL, AI, and statistics.
+> **An Optuna-first data science framework** for ML, statistics, and (soon) deep learning.
 
-`containeer_optuna` is a modular framework for running Optuna hyperparameter
-optimization experiments across regression, clustering, dimensionality
-reduction, and (in later milestones) classification, statistics, and deep
-learning. Configured via YAML, validated with pydantic, runnable from the CLI.
+`containeer_optuna` is a modular framework for running Optuna hyperparameter optimization experiments across regression, clustering, classification, and dimensionality reduction — plus a full statistics toolkit for EDA. Configured via YAML, validated with pydantic, runnable from the CLI.
 
 ## Why use it
 
+- **27 models** across regression (8), clustering (8), classification (4), reducers (5), scalers (2) — each with a model card (pros/cons/when-to-use).
+- **3 tasks**: regression, clustering, classification — all with pluggable metrics and auto-derived CV strategies.
+- **Model-selection-as-categorical**: one Optuna study searches across model families.
+- **Statistics toolkit**: hypothesis tests, normality, correlation, chi-square, descriptive — powered by `scipy.stats`.
 - **Declarative experiments** — one YAML per experiment, validated by typed models.
-- **Optuna-first** — every experiment is a study; samplers, pruners, storage, and visualization are first-class.
-- **Reusable abstractions** — datasets, models, pipelines, and objectives are registry-driven. Adding a model takes two lines.
-- **Model cards** — every model ships with pros/cons, assumptions, and when-to-use, surfaced in docs and `containeer-optuna describe`.
 - **Reproducible** — global seeding, SQLite storage, resumable studies.
+- **167 tests**, mkdocs-material docs site, CI on Python 3.10/3.11/3.12.
 
 ## Quick install
 
@@ -33,9 +33,19 @@ pip install -e ".[dev]"
 # Run a clustering study
 containeer-optuna run config/experiments/clustering_optimization.yaml --n-trials 20
 
+# Run a classification study
+containeer-optuna run config/experiments/breast_cancer_classification.yaml --n-trials 30
+
 # Explore the catalog
 containeer-optuna list-models
-containeer-optuna describe kmeans     # prints the model card (pros/cons)
+containeer-optuna describe random_forest     # prints the model card (pros/cons)
+
+# Statistical analysis
+containeer-optuna stats describe iris
+containeer-optuna stats anova iris_classification --group-by _target --feature sepal_length
+containeer-optuna stats correlation diabetes --method pearson --threshold 0.3
+
+# Optuna dashboard
 containeer-optuna dashboard --storage sqlite:///clustering_optuna.db
 ```
 
@@ -49,24 +59,33 @@ study = OptunaRunner(cfg).run(n_trials=20)
 
 print("best silhouette:", study.best_value)
 print("best params:", study.best_params)
-print("user attrs:", study.best_trial.user_attrs)
 ```
 
-## What's included (M0 — Foundation)
+Statistics:
 
-| Component | Status |
-|-----------|--------|
-| Regression (Ridge, Lasso, OLS) | ✅ |
-| Clustering (KMeans, DBSCAN, GMM) | ✅ |
-| Reducers (PCA, UMAP) | ✅ |
-| Scalers (Standard, MinMax) | ✅ |
-| YAML + pydantic config | ✅ |
-| CLI (run, describe, list-*, init, dashboard) | ✅ |
-| Model cards (pros/cons for all 10 models) | ✅ |
-| Optuna samplers (TPE, Random, CMA-ES, NSGA-II) + pruners | ✅ |
-| Tests (57) | ✅ |
-| Docs (mkdocs-material) | ✅ |
-| CI (GitHub Actions) + pre-commit | ✅ |
+```python
+from containeer_optuna import two_sample_ttest, shapiro_test, describe
+
+r = two_sample_ttest(group_a, group_b)
+print(r.test_name, r.statistic, r.pvalue)
+```
+
+## What's included
+
+| Component | Details |
+|-----------|---------|
+| Regression | Ridge, Lasso, OLS, ElasticNet, DecisionTree, RandomForest, GradientBoosting, SVR |
+| Clustering | KMeans, DBSCAN, GMM, HDBSCAN, Agglomerative, Spectral, Birch, OPTICS |
+| Classification | LogisticRegression, KNN, SVC, DecisionTreeClassifier |
+| Reducers | PCA, UMAP, t-SNE, TruncatedSVD, FactorAnalysis |
+| Scalers | StandardScaler, MinMaxScaler |
+| Statistics | t-test, ANOVA, Mann-Whitney, Kruskal-Wallis, Shapiro, Anderson, Pearson/Spearman/Kendall, chi-square, descriptive |
+| Metrics | R²/MSE/RMSE/MAE (regression); accuracy/F1/F1_weighted/roc_auc (classification); Silhouette/CH/DB (clustering) |
+| Model-selection | Search across model families in one study (regression + clustering + classification) |
+| Visualization | 2D embedding scatter, scree plots, `runner.plot_best_embedding()` |
+| Model cards | 27 cards with pros/cons/when-to-use/assumptions/complexity |
+| Tests | 167 passing |
+| Docs | mkdocs-material (English) |
 
 ## Documentation
 
@@ -74,18 +93,17 @@ print("user attrs:", study.best_trial.user_attrs)
 mkdocs serve
 ```
 
-Or read the markdown sources under [`docs/`](docs/). Highlights:
+Highlights:
 
 - [Getting Started](docs/getting_started/installation.md)
 - [Model Cards](docs/model_cards/index.md) — pros/cons per model
-- [Tutorials](docs/tutorials/regression_tutorial.md) — adapted from the notebooks
-- [Roadmap](docs/roadmap.md) — milestones M0–M9
+- [Tutorials](docs/tutorials/regression_tutorial.md) — regression, clustering, classification, feature-set selection, statistics
+- [Statistics](docs/user_guide/statistics.md) — hypothesis tests, normality, correlation
+- [Roadmap](docs/roadmap.md) — milestones M0–M5 done, M6–M9 planned
 
 ## Notebooks & mirror scripts
 
-The original Optuna experiments live under `notebooks/` and remain runnable
-standalone. Mirror `.py` scripts (extracted from the notebooks) live under
-`scripts/`:
+The original Optuna experiments live under `notebooks/` and remain runnable standalone. Mirror `.py` scripts (extracted from the notebooks) live under `scripts/`.
 
 | Notebook | Mirror script | Topic |
 |----------|---------------|-------|
@@ -99,12 +117,12 @@ standalone. Mirror `.py` scripts (extracted from the notebooks) live under
 
 ```
 containeer-optuna/
-├── src/containeer_optuna/      # the package (config, data, models, pipelines, optimization, evaluation, utils, cli)
+├── src/containeer_optuna/      # the package (config, data, models, pipelines, optimization, evaluation, statistics, utils, cli)
 ├── config/                     # datasets.yaml, models.yaml, experiments/*.yaml
 ├── docs/                       # mkdocs-material site (English)
 ├── notebooks/                  # original Optuna experiments (runnable)
 ├── scripts/                    # mirror .py scripts extracted from notebooks
-├── tests/                      # pytest suite (57 tests)
+├── tests/                      # pytest suite (167 tests)
 ├── mkdocs.yml
 ├── pyproject.toml
 └── .github/workflows/ci.yml
@@ -112,11 +130,7 @@ containeer-optuna/
 
 ## Roadmap
 
-The framework grows incrementally (Agile milestones). M0 is this release.
-Later milestones add: more regression models (M1), more clustering (M2),
-dimensionality reduction incl. t-SNE (M3), classification (M4), statistics
-(M5), deep learning (M6–M7), NLP/AI (M8), and productionization (M9). See
-[Roadmap](docs/roadmap.md).
+Milestones M0–M5 are shipped. Later milestones add deep learning (M6–M7), NLP/AI (M8), and productionization (M9). See [Roadmap](docs/roadmap.md).
 
 ## License
 
