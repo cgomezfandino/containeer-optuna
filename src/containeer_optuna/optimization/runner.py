@@ -33,6 +33,9 @@ from .objectives import (
 # Models that use the PyTorch DL objective (custom training loop + pruning).
 _DL_MODELS = {"mlp_regressor", "mlp_classifier", "cnn_classifier", "rnn_classifier"}
 
+# Models that use the NLP objective (transformer fine-tuning + pruning).
+_NLP_MODELS = {"transformer_classifier"}
+
 try:
     import optuna
     from optuna.pruners import (
@@ -190,6 +193,13 @@ class OptunaRunner:
             self.load_data()
 
         assert self.X is not None  # for mypy
+
+        # NLP models (M8): transformer fine-tuning with tokenization + pruning.
+        if self.config.model in _NLP_MODELS:
+            assert self.y is not None, "NLP classification requires a target column"
+            from .objectives.nlp import make_nlp_objective
+
+            return make_nlp_objective(self.config, self.X, self.y)
 
         # DL models (M6): custom training loop with epoch pruning.
         if self.config.model in _DL_MODELS:

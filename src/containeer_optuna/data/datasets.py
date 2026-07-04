@@ -188,6 +188,53 @@ def _load_sklearn_dataset(name: str) -> pd.DataFrame:
 # Names of torchvision datasets supported (M7).
 _TORCHVISION_LOADERS = {"MNIST", "CIFAR10", "FashionMNIST"}
 
+# HuggingFace datasets supported (M8) — name → HF dataset path.
+_HUGGINGFACE_LOADERS = {"imdb": "imdb", "ag_news": "ag_news", "sst2": "glue:config/sst2"}
+
+
+def _load_huggingface_dataset(name: str) -> tuple[np.ndarray, np.ndarray]:
+    """Load a HuggingFace text dataset as ``(texts, labels)`` numpy arrays.
+
+    Args:
+        name: Dataset key — ``"imdb"``, ``"ag_news"``, or ``"sst2"``.
+
+    Returns:
+        A tuple ``(texts, labels)`` where ``texts`` is a numpy array of strings
+        and ``labels`` is a numpy array of integer labels.
+
+    Raises:
+        ValueError: If ``name`` is not recognized.
+        ImportError: If ``datasets`` is not installed.
+    """
+    if name not in _HUGGINGFACE_LOADERS:
+        raise ValueError(
+            f"Unknown HuggingFace dataset '{name}'. Known: {sorted(_HUGGINGFACE_LOADERS)}"
+        )
+
+    try:
+        from datasets import load_dataset
+    except ImportError as e:
+        raise ImportError(
+            "datasets is required for HuggingFace text datasets. "
+            "Install it with: pip install containeer-optuna[nlp]"
+        ) from e
+
+    hf_path = _HUGGINGFACE_LOADERS[name]
+    # Handle "glue:config/sst2" format.
+    if ":" in hf_path:
+        parts = hf_path.split(":")
+        dataset = load_dataset(parts[0], parts[1].split("/")[-1], split="train")
+    else:
+        dataset = load_dataset(hf_path, split="train")
+
+    # Determine text and label columns.
+    text_col = "text" if "text" in dataset.column_names else dataset.column_names[0]
+    label_col = "label" if "label" in dataset.column_names else dataset.column_names[-1]
+
+    texts = np.array(dataset[text_col])
+    labels = np.array(dataset[label_col])
+    return texts, labels
+
 
 def _load_torchvision_dataset(name: str) -> tuple[np.ndarray, np.ndarray]:
     """Load a torchvision dataset as ``(X, y)`` numpy arrays.
@@ -274,6 +321,11 @@ class YamlDatasetLoader(BaseDataset):
             # Returns numpy arrays (X: NCHW, y: labels) — NOT a DataFrame.
             # The DL objective handles numpy arrays directly.
             return _load_torchvision_dataset(cfg.torchvision_name or cfg.name)
+        elif cfg.source == "huggingface":
+            # Text datasets via HuggingFace datasets (IMDB, AG_NEWS, etc.).
+            # Returns numpy arrays (texts: str, labels: int) — NOT a DataFrame.
+            # The NLP objective tokenizes raw text directly.
+            return _load_huggingface_dataset(cfg.huggingface_name or cfg.name)
         elif cfg.source == "kaggle" or (cfg.download and cfg.kaggle_dataset):
             _, df = _resolve_kaggle_path(cfg.kaggle_dataset or "")
             df = _preprocess(df, preprocessing)

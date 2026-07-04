@@ -64,6 +64,12 @@ notebooks = [
 dl = [
     "torch>=2.0.0",
 ]
+nlp = [
+    "transformers>=4.30.0",
+    "datasets>=2.0.0",
+    "tokenizers>=0.13.0",
+    "accelerate>=0.20.0",
+]
 
 [project.scripts]
 containeer-optuna = "containeer_optuna.cli:app"

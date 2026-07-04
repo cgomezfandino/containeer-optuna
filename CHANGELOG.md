@@ -1,31 +1,32 @@
 # Changelog
 
-## [Unreleased] — M7 — DL Advanced (CNN + RNN)
+## [Unreleased] — M8 — NLP/AI (Transformers)
 
 ### Added
-- **CNN classifier** (`cnn_classifier`): PyTorch ConvNet for image
-  classification (MNIST/CIFAR). Configurable conv channels, kernel size, FC
-  layers. Per-channel [0,1] normalization.
-- **RNN classifier** (`rnn_classifier`): PyTorch LSTM/GRU for sequence
-  classification. Configurable hidden_size, n_layers, bidirectional, rnn_type.
-- **Backend abstraction** (`models/dl/backends.py`): MLPBackend, CNNBackend,
-  RNNBackend — each handles architecture-specific module construction and data
-  preparation (tensor shaping + normalization). The shared training/pruning
-  loop in make_dl_objective is now backend-agnostic.
-- **source: torchvision**: new dataset source for image data (MNIST, CIFAR10,
-  FashionMNIST). Returns (X, y) numpy arrays in NCHW format.
-- **2 model cards** (CNN_CLASSIFIER_CARD, RNN_CLASSIFIER_CARD, milestone M7).
-- **Experiments**: mnist_cnn_classification.yaml, mnist_rnn_classification.yaml.
-- **6 new tests** (180 total): CNN/RNN module forward passes, CNN/RNN e2e,
-  card assertions.
+- **Transformer text classification** (`transformer_classifier`): DistilBERT/BERT
+  fine-tuning for text classification. Per-trial: tokenization, AdamW optimizer,
+  linear warmup scheduler, epoch pruning (trial.report + should_prune).
+- **`make_nlp_objective`**: dedicated objective for transformer fine-tuning,
+  separate from the DL objective (transformers need tokenization +
+  attention_mask which don't fit the tensor-in/logits-out DL loop).
+- **`models/dl/transformer.py`**: build_transformer_module + build_tokenizer
+  (lazy import of transformers).
+- **`[nlp]` optional extra**: transformers, datasets, tokenizers, accelerate.
+- **`source: huggingface`**: new dataset source for text data (AG_NEWS, IMDB).
+  Returns (texts, labels) numpy arrays.
+- **Model card**: TRANSFORMER_CLASSIFIER_CARD (milestone M8).
+- **Experiment**: agnews_transformer_classification.yaml.
+- **5 new tests** (185 total): transformer module build, tokenizer, NLP e2e,
+  card assertions. All guarded by pytest.importorskip("transformers").
 
-### Changed
-- `make_dl_objective` refactored to accept a pluggable backend (MLP/CNN/RNN)
-  instead of hardcoded MLP logic. The training loop (epoch + pruning + scoring)
-  is shared; only build_module + prepare_fold differ.
-- `_DL_MODELS` in runner.py expanded to include cnn_classifier, rnn_classifier.
-- `DatasetConfig.source` widened to accept "torchvision".
+### Design
+- NLP uses a separate objective (make_nlp_objective), NOT the DL backend
+  abstraction. Transformers need raw text → tokenizer → input_ids +
+  attention_mask → model forward, which is structurally different from the
+  tensor-in/logits-out DL loop.
+- _NLP_MODELS set in runner.py routes to make_nlp_objective before _DL_MODELS.
+- DatasetConfig.source widened to accept "huggingface".
 
-## [0.6.0] — M5–M6
+## [0.6.0–0.7.0] — M5–M7
 
-Statistics (M5) + Deep Learning MLP (M6). See PRs #6, #7, #8.
+Statistics (M5) + DL MLP (M6) + DL CNN/RNN (M7). See PRs #6–#9.
