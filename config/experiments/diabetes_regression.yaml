@@ -1,0 +1,23 @@
+name: diabetes_regression
+task: regression
+dataset: diabetes
+model: random_forest
+metric: r2
+scaler: standard_scaler
+reducer: null
+random_state: 42
+
+cv:
+  strategy: shuffle_split
+  n_splits: 5
+  test_size: 0.2
+  random_state: 42
+
+optimization:
+  enabled: true
+  n_trials: 50
+  direction: maximize
+  storage: sqlite:///optuna_studies.db
+  load_if_exists: true
+  sampler: tpe
+  pruner: null

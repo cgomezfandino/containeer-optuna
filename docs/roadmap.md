@@ -10,7 +10,7 @@ experiments, regression (Ridge/Lasso/OLS) + clustering (KMeans/DBSCAN/GMM) +
 reducers (PCA/UMAP) + scalers (Standard/MinMax), Optuna integration with
 samplers/pruners, model cards (pros/cons), 57 tests, mkdocs site.
 
-## M1 — Regression maturity (planned)
+## M1 — Regression maturity ✅ (current release)
 
 ElasticNet, DecisionTree, RandomForest, GradientBoosting, SVR. Pluggable
 metrics (MSE/MAE/RMSE/MAPE). Optuna feature-set selection. Model-selection-as-

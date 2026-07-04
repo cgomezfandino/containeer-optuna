@@ -123,3 +123,83 @@ def test_model_config_accepts_classification_type():
     """Forward-compat: classification will land in M4."""
     m = ModelConfig(name="logreg", type="classification")
     assert m.type == "classification"
+
+
+# --- M1: metric → direction, feature_sets, source ----------------------
+
+
+def test_metric_r2_derives_maximize_direction():
+    cfg = ExperimentConfig(
+        name="e",
+        task="regression",
+        dataset="diabetes",
+        model="ridge",
+        metric="r2",
+        optimization=OptimizationConfig(),
+    )
+    assert cfg.optimization.direction == "maximize"
+
+
+def test_metric_mse_derives_minimize_direction():
+    cfg = ExperimentConfig(
+        name="e",
+        task="regression",
+        dataset="diabetes",
+        model="ridge",
+        metric="mse",
+        optimization=OptimizationConfig(),
+    )
+    assert cfg.optimization.direction == "minimize"
+
+
+def test_metric_rmse_and_mae_derive_minimize():
+    for metric in ["rmse", "mae"]:
+        cfg = ExperimentConfig(
+            name="e",
+            task="regression",
+            dataset="diabetes",
+            model="ridge",
+            metric=metric,
+            optimization=OptimizationConfig(),
+        )
+        assert cfg.optimization.direction == "minimize"
+
+
+def test_metric_none_keeps_default_direction():
+    cfg = ExperimentConfig(
+        name="e",
+        task="regression",
+        dataset="diabetes",
+        model="ridge",
+        optimization=OptimizationConfig(),
+    )
+    # No metric → direction stays at OptimizationConfig default (maximize).
+    assert cfg.optimization.direction == "maximize"
+
+
+def test_feature_sets_accepted():
+    cfg = ExperimentConfig(
+        name="e",
+        task="regression",
+        dataset="diabetes",
+        model="ridge",
+        feature_sets={"a": ["bmi", "bp"], "b": ["s1", "s2"]},
+        optimization=OptimizationConfig(),
+    )
+    assert cfg.feature_sets is not None
+    assert "a" in cfg.feature_sets
+
+
+def test_dataset_source_field():
+    from containeer_optuna.config import DatasetConfig
+
+    cfg = DatasetConfig(name="diabetes", source="sklearn", sklearn_name="diabetes")
+    assert cfg.source == "sklearn"
+    assert cfg.sklearn_name == "diabetes"
+
+
+def test_load_diabetes_experiment_yaml(experiments_dir: Path):
+    cfg = load_config(experiments_dir / "diabetes_regression.yaml")
+    assert cfg.task == "regression"
+    assert cfg.model == "random_forest"
+    assert cfg.metric == "r2"

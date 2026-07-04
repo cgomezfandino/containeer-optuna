@@ -107,3 +107,68 @@ def test_overrides_win_over_sampled():
     est = get_model("kmeans", trial=trial, namespace="kmeans", random_state=123)
     assert est.random_state == 123
     assert est.n_clusters == 5
+
+
+# --- M1: new regression models ------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "name,cls_name",
+    [
+        ("elasticnet", "ElasticNet"),
+        ("decision_tree", "DecisionTreeRegressor"),
+        ("random_forest", "RandomForestRegressor"),
+        ("gradient_boosting", "GradientBoostingRegressor"),
+        ("svr", "SVR"),
+    ],
+)
+def test_m1_models_instantiate_with_defaults(name, cls_name):
+    est = get_model(name)
+    assert type(est).__name__ == cls_name
+
+
+def test_elasticnet_with_sampled_params():
+    # alpha (float), l1_ratio (float)
+    trial = _FakeTrial([0.5, 0.3])
+    est = get_model("elasticnet", trial=trial, namespace="elasticnet")
+    assert est.alpha == 0.5
+    assert est.l1_ratio == 0.3
+    # Confirm namespacing
+    assert trial.calls[0][1] == "elasticnet_alpha"
+
+
+def test_random_forest_with_sampled_params():
+    # n_estimators (int), max_depth (categorical), min_samples_split (int), max_features (categorical)
+    trial = _FakeTrial([200, 10, 5, "log2"])
+    est = get_model("random_forest", trial=trial, namespace="random_forest")
+    assert est.n_estimators == 200
+    assert est.max_depth == 10  # int choice passed through
+    assert est.min_samples_split == 5
+    assert est.max_features == "log2"
+
+
+def test_max_depth_none_coercion():
+    """The sentinel string 'None' must be coerced to Python None for RF/DT."""
+    # n_estimators, max_depth="None", min_samples_split, max_features
+    trial = _FakeTrial([100, "None", 2, "sqrt"])
+    est = get_model("random_forest", trial=trial, namespace="random_forest")
+    assert est.max_depth is None  # coerced from "None"
+
+
+def test_svr_with_sampled_params():
+    # C (float log), epsilon (float log), kernel (categorical)
+    trial = _FakeTrial([10.0, 0.01, "linear"])
+    est = get_model("svr", trial=trial, namespace="svr")
+    assert est.C == 10.0
+    assert est.epsilon == 0.01
+    assert est.kernel == "linear"
+
+
+def test_gradient_boosting_with_sampled_params():
+    # learning_rate (float log), n_estimators (int), max_depth (int), subsample (float)
+    trial = _FakeTrial([0.05, 300, 5, 0.8])
+    est = get_model("gradient_boosting", trial=trial, namespace="gradient_boosting")
+    assert est.learning_rate == 0.05
+    assert est.n_estimators == 300
+    assert est.max_depth == 5
+    assert est.subsample == 0.8

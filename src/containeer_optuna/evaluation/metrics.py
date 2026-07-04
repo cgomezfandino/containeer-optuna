@@ -12,8 +12,11 @@ found. The convention throughout the framework is:
 * **Davies-Bouldin** (within/between cluster ratio) is stored as a
   ``user_attr`` (minimize; lower is better).
 
-For regression, :func:`regression_metrics` returns R², MSE, MAE. The convention
-is to optimize **R²** (maximize) by default; M1 will make the metric pluggable.
+For regression, :func:`regression_metrics` returns R², MSE, RMSE, MAE. The
+primary metric is pluggable via the ``metric`` field on ``ExperimentConfig``
+(M1): choose ``r2`` (maximize, default), or ``mse``/``rmse``/``mae`` (minimize).
+Use :func:`get_regression_scorer` to resolve a metric name into a sklearn
+scorer + the matching optimization direction.
 """
 
 from __future__ import annotations
@@ -24,6 +27,7 @@ import numpy as np
 from sklearn.metrics import (
     calinski_harabasz_score,
     davies_bouldin_score,
+    get_scorer,
     mean_absolute_error,
     mean_squared_error,
     r2_score,
@@ -31,6 +35,41 @@ from sklearn.metrics import (
 )
 
 ArrayLike = Union[np.ndarray, "list"]
+
+# --- Pluggable regression scorers (M1) -----------------------------------
+#
+# Maps a friendly metric name → (sklearn scorer name, optimization direction).
+# The sklearn scorer name encodes the sign so that higher is always better
+# inside ``cross_validate``; the direction tells Optuna how to set up the study.
+REGRESSION_SCORERS: dict[str, tuple[str, str]] = {
+    "r2": ("r2", "maximize"),
+    "mse": ("neg_mean_squared_error", "minimize"),
+    "rmse": ("neg_root_mean_squared_error", "minimize"),
+    "mae": ("neg_mean_absolute_error", "minimize"),
+}
+
+
+def get_regression_scorer(metric: str) -> tuple[object, str]:
+    """Return ``(scorer, direction)`` for a regression metric name.
+
+    Args:
+        metric: One of ``"r2"``, ``"mse"``, ``"rmse"``, ``"mae"``.
+
+    Returns:
+        A tuple ``(scorer, direction)`` where ``scorer`` is a sklearn scorer
+        callable (sign baked in so higher is always better inside
+        ``cross_validate``) and ``direction`` is ``"maximize"`` or
+        ``"minimize"`` for the Optuna study.
+
+    Raises:
+        ValueError: If ``metric`` is not a recognized regression metric.
+    """
+    if metric not in REGRESSION_SCORERS:
+        raise ValueError(
+            f"Unknown regression metric '{metric}'. Known metrics: {sorted(REGRESSION_SCORERS)}"
+        )
+    scorer_name, direction = REGRESSION_SCORERS[metric]
+    return get_scorer(scorer_name), direction
 
 
 def regression_metrics(y_true: ArrayLike, y_pred: ArrayLike) -> dict[str, float]:
@@ -88,4 +127,9 @@ def clustering_metrics(X: ArrayLike, labels: ArrayLike) -> dict[str, float]:
     }
 
 
-__all__ = ["regression_metrics", "clustering_metrics"]
+__all__ = [
+    "REGRESSION_SCORERS",
+    "get_regression_scorer",
+    "regression_metrics",
+    "clustering_metrics",
+]

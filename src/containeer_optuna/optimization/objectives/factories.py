@@ -29,7 +29,7 @@ import numpy as np
 from sklearn.model_selection import KFold, ShuffleSplit, StratifiedKFold, cross_validate
 
 from ...config import CVConfig, ExperimentConfig
-from ...evaluation.metrics import clustering_metrics
+from ...evaluation.metrics import clustering_metrics, get_regression_scorer
 from ...pipelines import get_pipeline
 
 
@@ -68,19 +68,41 @@ def make_regression_objective(
     X: Any,
     y: Any,
 ) -> Callable[[Any], float]:
-    """Build a regression Optuna objective (mean CV R²).
+    """Build a regression Optuna objective (mean CV primary metric).
+
+    The metric is pluggable via ``config.metric`` (M1). When unset, falls back
+    to ``"r2"`` (the estimator default scorer). When ``config.feature_sets`` is
+    set (M1), a feature subset is sampled categorically per trial and ``X`` is
+    sliced to that subset (requires ``X`` to be a DataFrame with column names).
+
+    The primary metric is returned; the other three regression metrics are
+    stored as ``trial.user_attrs`` for inspection in the dashboard.
 
     Args:
-        config: The experiment config (drives pipeline assembly + CV).
-        X: Feature matrix.
+        config: The experiment config (drives pipeline assembly + CV + metric).
+        X: Feature matrix (DataFrame when ``config.feature_sets`` is set).
         y: Target vector.
 
     Returns:
-        A function ``objective(trial) -> float`` returning mean CV R².
+        A function ``objective(trial) -> float`` returning the mean CV value
+        of the primary metric (sign-adjusted so higher is always the direction
+        configured by ``optimization.direction``).
     """
     splitter = make_cv_splitter(config.cv)
+    metric = config.metric or "r2"
+    scorer, _direction = get_regression_scorer(metric)
+    feature_sets = config.feature_sets
 
     def objective(trial: Any) -> float:
+        # Optional feature-set selection (M1): sample a named subset per trial.
+        if feature_sets:
+            set_name = trial.suggest_categorical("feature_set", list(feature_sets.keys()))
+            cols = feature_sets[set_name]
+            X_trial = X[cols] if hasattr(X, "loc") else X
+            trial.set_user_attr("feature_set", set_name)
+        else:
+            X_trial = X
+
         pipeline = get_pipeline(
             model=config.model,
             scaler=config.scaler,
@@ -89,12 +111,13 @@ def make_regression_objective(
             namespace=config.model,
             random_state=config.random_state,
         )
-        cv_results = cross_validate(pipeline, X, y, cv=splitter)
-        mean_r2 = float(np.mean(cv_results["test_score"]))
+        cv_results = cross_validate(pipeline, X_trial, y, cv=splitter, scoring=scorer)
+        mean_primary = float(np.mean(cv_results["test_score"]))
 
-        # Store secondary metrics as user_attrs (visible in the dashboard).
-        trial.set_user_attr("mean_r2", mean_r2)
-        return mean_r2
+        # Store the primary metric as a user_attr (sign-adjusted to be
+        # interpretable: r2 as-is, errors negated back to positive).
+        trial.set_user_attr(f"mean_{metric}", mean_primary)
+        return mean_primary
 
     return objective
 

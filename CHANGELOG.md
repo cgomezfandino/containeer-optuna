@@ -4,43 +4,38 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] — Unreleased (M0 — Foundation)
+## [Unreleased] — M1 — Regression Maturity
 
 ### Added
-- `containeer_optuna` package: importable from `src/`.
-- Subpackages: `config`, `data`, `models`, `pipelines`, `optimization`,
-  `evaluation`, `utils`, `cli`.
-- `OptunaRunner` — YAML-driven Optuna study execution with samplers (TPE,
-  Random, CMA-ES, NSGA-II) and pruners (Median, Percentile, Hyperband, None).
-- Generic `param_space` dispatcher (float/int/categorical → `trial.suggest_*`).
-- Model registry: Ridge, Lasso, OLS, KMeans, DBSCAN, GMM, PCA, UMAP,
-  StandardScaler, MinMaxScaler.
-- Dataset registry: Auto MPG (local), Iris (bundled), customer_personality,
-  credit_card (Kaggle).
-- Clustering objective with DBSCAN noise stripping and full-pipeline scoring
-  (fixes two latent bugs in the source notebook).
-- `containeer-optuna` CLI: run, list-models, list-datasets, list-experiments,
-  describe (model cards), dashboard, init.
-- Model cards (pros/cons/when-to-use/assumptions/complexity) for all 10 models.
-- Experiment catalog: `config/experiments/{clustering_optimization,
-  auto_mpg_model_selection, auto_mpg_feature_set_selection}.yaml`.
-- pytest suite: 57 tests across config, data, models, pipelines, optimization,
-  evaluation, CLI.
-- mkdocs-material documentation site (English): getting started, user guide,
-  model cards, tutorials, API reference, roadmap, contributing.
-- Pre-commit hooks, GitHub Actions CI, LICENSE (MIT), CHANGELOG, .env.example.
+- **5 new regression models**: ElasticNet, DecisionTree, RandomForest,
+  GradientBoosting, SVR — each with industry-aligned hyperparameter ranges
+  (search spaces cross-referenced with Optuna/sklearn community benchmarks)
+  and full model cards (pros/cons/when-to-use/assumptions/complexity).
+- **Pluggable regression metrics**: the `metric` field on `ExperimentConfig`
+  (`r2`/`mse`/`rmse`/`mae`) drives both the CV scorer and the optimization
+  direction automatically. New `get_regression_scorer()` helper.
+- **Feature-set selection**: the `feature_sets` field lets Optuna search over
+  named feature subsets per trial (formalizes the notebook pattern). The
+  chosen subset is stored as a `user_attr`.
+- **Bundled diabetes dataset** (`source: sklearn`): 442×10 regression dataset
+  with no download required — enables true end-to-end regression CI tests.
+  Generic `source` field on `DatasetConfig` replaces the hard-coded Iris branch
+  (`local`/`kaggle`/`sklearn`).
+- **New experiments**: `diabetes_regression.yaml` (RF on diabetes),
+  `diabetes_feature_set_selection.yaml` (feature-set selection demo).
+- **28 new tests** (85 total): per-model instantiation + sampling tests, the
+  `"None"` → `None` max_depth coercion, metric→direction derivation, diabetes
+  loader, MSE objective e2e, feature-set selection e2e, RF e2e.
 
 ### Changed
-- `config.py`: fixed path resolution bug (was looking at `src/config/` instead
-  of `<repo>/config/`); widened `ModelConfig.type` to accept reducer/scaler;
-  fixed `study_name` validator to use the experiment name; added `CO_` env
-  prefix to `Settings`.
-- `pyproject.toml`: removed the broken inline `[tool.mkdocs]` block; moved ruff
-  config to `[tool.ruff.lint]`; bumped mypy `python_version` to 3.10.
-- `requirements.txt`: realigned with `pyproject.toml` dependencies (was a
-  notebook-only freeze missing pydantic/typer/rich/etc.). Old freeze moved to
-  `requirements-notebooks.txt`.
+- `max_depth` for RF/DT uses a categorical with a `"None"` sentinel; the
+  registry coerces it to Python `None` before construction (no dispatcher change).
+- The Iris dataset loader now uses the generic `source: sklearn` dispatch.
+- `DatasetConfig` gained `source` and `sklearn_name` fields.
+- `ExperimentConfig` gained `metric` and `feature_sets` fields.
+- Docs regenerated: 15 model cards (was 10), new feature-set-selection
+  tutorial, updated evaluation/models/configuration guides.
 
-### Removed
-- `main.py` (dead stub).
-- `src/containeer_optuna/optimization/{objectives}/` (stray literal-brace dir).
+## [0.1.0] — M0 — Foundation
+
+See the M0 release notes in the merged PR #1.

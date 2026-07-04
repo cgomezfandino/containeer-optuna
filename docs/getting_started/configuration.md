@@ -53,3 +53,40 @@ CO_LOG_LEVEL=INFO
 ```
 
 See `.env.example`.
+
+## M1 fields
+
+### `metric` (regression only)
+
+Choose the optimization objective. Drives both the scorer AND the direction:
+
+```yaml
+metric: mse   # r2 (default) | mse | rmse | mae
+```
+
+### `feature_sets` (regression only)
+
+Named feature subsets for feature-set selection. Optuna samples one per trial:
+
+```yaml
+feature_sets:
+  small: ["a", "b"]
+  full:  ["a", "b", "c", "d"]
+```
+
+### `source` (datasets.yaml)
+
+Where the dataset comes from:
+
+| Source | Behavior |
+|--------|----------|
+| `local` (default) | Read from `path`. |
+| `kaggle` | Download via `kagglehub` (`kaggle_dataset` required). |
+| `sklearn` | Bundled sklearn dataset (`sklearn_name`: iris, diabetes, wine, breast_cancer). |
+
+```yaml
+- name: diabetes
+  source: sklearn
+  sklearn_name: diabetes
+  target_column: target
+```

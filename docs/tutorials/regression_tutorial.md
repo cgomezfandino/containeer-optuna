@@ -34,3 +34,30 @@ print("best R²:", study.best_value)
 
 See also the [mirror script](https://github.com/cgomezfandino/containeer-optuna/tree/main/scripts)
 and the [Levels of Maturity](levels_of_maturity.md) tutorial.
+
+
+## M1: New models + pluggable metrics + diabetes
+
+M1 adds 5 regression models (ElasticNet, DecisionTree, RandomForest,
+GradientBoosting, SVR), pluggable metrics, and a bundled diabetes dataset
+(no download). Compare them:
+
+```bash
+containeer-optuna describe random_forest
+containeer-optuna describe svr
+```
+
+Run RandomForest on diabetes (R squared, no external data needed):
+
+```bash
+containeer-optuna run config/experiments/diabetes_regression.yaml --n-trials 30
+```
+
+Optimize for MAE instead of R squared (direction auto-derives to minimize):
+
+```yaml
+metric: mae
+```
+
+See [Feature-set selection](feature_set_selection.md) to search over named
+feature subsets.

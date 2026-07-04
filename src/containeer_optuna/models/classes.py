@@ -10,15 +10,24 @@ from __future__ import annotations
 
 from sklearn.cluster import DBSCAN, KMeans
 from sklearn.decomposition import PCA
-from sklearn.linear_model import Lasso, LinearRegression, Ridge
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.linear_model import ElasticNet, Lasso, LinearRegression, Ridge
 from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.svm import SVR
+from sklearn.tree import DecisionTreeRegressor
 
 # Regression estimators ---------------------------------------------------
 REGRESSION_MODELS: dict[str, type] = {
     "ridge": Ridge,
     "lasso": Lasso,
     "ols": LinearRegression,
+    # M1 — Regression maturity
+    "elasticnet": ElasticNet,
+    "decision_tree": DecisionTreeRegressor,
+    "random_forest": RandomForestRegressor,
+    "gradient_boosting": GradientBoostingRegressor,
+    "svr": SVR,
 }
 
 # Clustering estimators ---------------------------------------------------

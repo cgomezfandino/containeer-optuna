@@ -42,6 +42,112 @@ models:
     default_params: {}
     param_space: {}
 
+  - name: "elasticnet"
+    type: "regression"
+    default_params:
+      alpha: 1.0
+      l1_ratio: 0.5
+      random_state: 42
+      max_iter: 10000
+    param_space:
+      alpha:
+        type: "float"
+        low: 0.0001
+        high: 10.0
+        log: true
+      l1_ratio:
+        type: "float"
+        low: 0.0
+        high: 1.0
+
+  - name: "decision_tree"
+    type: "regression"
+    default_params:
+      max_depth: null
+      min_samples_split: 2
+      random_state: 42
+    param_space:
+      max_depth:
+        type: "categorical"
+        choices: ["None", 5, 10, 20, 30]
+      min_samples_split:
+        type: "int"
+        low: 2
+        high: 20
+
+  - name: "random_forest"
+    type: "regression"
+    default_params:
+      n_estimators: 100
+      max_depth: null
+      min_samples_split: 2
+      max_features: "sqrt"
+      random_state: 42
+      n_jobs: -1
+    param_space:
+      n_estimators:
+        type: "int"
+        low: 50
+        high: 1000
+      max_depth:
+        type: "categorical"
+        choices: ["None", 5, 10, 20, 30]
+      min_samples_split:
+        type: "int"
+        low: 2
+        high: 20
+      max_features:
+        type: "categorical"
+        choices: ["sqrt", "log2"]
+
+  - name: "gradient_boosting"
+    type: "regression"
+    default_params:
+      learning_rate: 0.1
+      n_estimators: 100
+      max_depth: 3
+      subsample: 1.0
+      random_state: 42
+    param_space:
+      learning_rate:
+        type: "float"
+        low: 0.001
+        high: 0.5
+        log: true
+      n_estimators:
+        type: "int"
+        low: 100
+        high: 1000
+      max_depth:
+        type: "int"
+        low: 3
+        high: 10
+      subsample:
+        type: "float"
+        low: 0.5
+        high: 1.0
+
+  - name: "svr"
+    type: "regression"
+    default_params:
+      C: 1.0
+      epsilon: 0.1
+      kernel: "rbf"
+    param_space:
+      C:
+        type: "float"
+        low: 0.01
+        high: 1000.0
+        log: true
+      epsilon:
+        type: "float"
+        low: 0.001
+        high: 1.0
+        log: true
+      kernel:
+        type: "categorical"
+        choices: ["rbf", "linear", "poly"]
+
   - name: "kmeans"
     type: "clustering"
     default_params:

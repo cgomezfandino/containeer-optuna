@@ -1,0 +1,30 @@
+name: diabetes_feature_set_selection
+task: regression
+dataset: diabetes
+model: ridge
+metric: r2
+scaler: standard_scaler
+reducer: null
+random_state: 42
+
+# Feature-set selection (M1): Optuna samples a named subset per trial.
+feature_sets:
+  clinical:    ["age", "sex", "bmi", "bp"]
+  serum:       ["s1", "s2", "s3", "s4", "s5", "s6"]
+  full:        ["age", "sex", "bmi", "bp", "s1", "s2", "s3", "s4", "s5", "s6"]
+  bmi_focus:   ["bmi", "s5", "bp", "s3"]
+
+cv:
+  strategy: shuffle_split
+  n_splits: 5
+  test_size: 0.2
+  random_state: 42
+
+optimization:
+  enabled: true
+  n_trials: 60
+  direction: maximize
+  storage: sqlite:///optuna_studies.db
+  load_if_exists: true
+  sampler: tpe
+  pruner: null

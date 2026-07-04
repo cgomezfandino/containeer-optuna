@@ -130,3 +130,82 @@ def test_optuna_runner_end_to_end_clustering(small_clustering_data):
     runner.y = None
     study = runner.run(n_trials=3, show_progress_bar=False)
     assert len(study.trials) == 3
+
+
+# --- M1: pluggable metrics, feature-set selection, new models ----------
+
+
+def test_regression_with_mse_metric(small_regression_data):
+    """metric='mse' must set direction to minimize and return a negative score."""
+    X, y = small_regression_data
+    cfg = _in_memory_cfg(
+        name="reg_mse",
+        task="regression",
+        dataset="diabetes",
+        model="ridge",
+        scaler="standard_scaler",
+        metric="mse",
+        optimization=OptimizationConfig(n_trials=2),
+    )
+    cfg.cv = CVConfig(strategy="shuffle_split", n_splits=2)
+    assert cfg.optimization.direction == "minimize"  # derived from metric
+    runner = OptunaRunner(cfg)
+    runner.X = np.asarray(X)
+    runner.y = np.asarray(y)
+    study = runner.run(n_trials=2, show_progress_bar=False)
+    assert len(study.trials) == 2
+    # MSE scorer returns negative values (sign-adjusted); best_value ≤ 0.
+    assert study.best_value <= 0
+
+
+def test_regression_feature_set_selection(small_regression_data):
+    """feature_sets must be sampled per trial and stored as a user_attr."""
+    import pandas as pd
+
+    X_np, y = small_regression_data
+    # Build a DataFrame so feature_sets column slicing works.
+    X = pd.DataFrame(X_np, columns=["a", "b", "c"])
+    cfg = _in_memory_cfg(
+        name="reg_fs",
+        task="regression",
+        dataset="diabetes",
+        model="ridge",
+        scaler="standard_scaler",
+        metric="r2",
+        feature_sets={"pair_ab": ["a", "b"], "pair_bc": ["b", "c"], "all": ["a", "b", "c"]},
+        optimization=OptimizationConfig(n_trials=3),
+    )
+    cfg.cv = CVConfig(strategy="shuffle_split", n_splits=2)
+    runner = OptunaRunner(cfg)
+    runner.X = X  # DataFrame, not numpy
+    runner.y = np.asarray(y)
+    study = runner.run(n_trials=3, show_progress_bar=False)
+    assert len(study.trials) == 3
+    # Every trial must have sampled a feature_set.
+    for t in study.trials:
+        assert "feature_set" in t.user_attrs
+        assert t.user_attrs["feature_set"] in {"pair_ab", "pair_bc", "all"}
+    # best_params must include the feature_set choice.
+    assert "feature_set" in study.best_params
+
+
+def test_regression_random_forest_e2e(small_regression_data):
+    """A tree ensemble (random_forest) must run end-to-end on synthetic data."""
+    X, y = small_regression_data
+    cfg = _in_memory_cfg(
+        name="reg_rf",
+        task="regression",
+        dataset="diabetes",
+        model="random_forest",
+        scaler="standard_scaler",
+        metric="r2",
+        optimization=OptimizationConfig(n_trials=2),
+    )
+    cfg.cv = CVConfig(strategy="shuffle_split", n_splits=2)
+    runner = OptunaRunner(cfg)
+    runner.X = np.asarray(X)
+    runner.y = np.asarray(y)
+    study = runner.run(n_trials=2, show_progress_bar=False)
+    assert len(study.trials) == 2
+    # RF params should appear namespaced.
+    assert any(k.startswith("random_forest_") for k in study.best_params)
