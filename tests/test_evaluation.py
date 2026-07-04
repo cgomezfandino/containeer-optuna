@@ -67,3 +67,42 @@ def test_card_to_dict_serializable():
     d = card_to_dict(card)
     assert d["name"] == "ridge"
     assert isinstance(d["pros"], list)
+
+
+# --- M1: new model cards + pluggable scorers ----------------------------
+
+
+def test_m1_model_cards_present():
+    cards = {c.name for c in all_model_cards()}
+    for m in ["elasticnet", "decision_tree", "random_forest", "gradient_boosting", "svr"]:
+        assert m in cards
+
+
+def test_m1_cards_marked_m1_milestone():
+    for name in ["elasticnet", "decision_tree", "random_forest", "gradient_boosting", "svr"]:
+        assert get_model_card(name).milestone == "M1"
+
+
+def test_regression_scorers_known():
+    from containeer_optuna.evaluation import REGRESSION_SCORERS
+
+    assert set(REGRESSION_SCORERS) == {"r2", "mse", "rmse", "mae"}
+
+
+def test_get_regression_scorer_returns_scorer_and_direction():
+    from containeer_optuna.evaluation import get_regression_scorer
+
+    scorer, direction = get_regression_scorer("r2")
+    assert direction == "maximize"
+    assert callable(scorer)
+
+    scorer, direction = get_regression_scorer("mse")
+    assert direction == "minimize"
+    assert callable(scorer)
+
+
+def test_get_regression_scorer_unknown_raises():
+    from containeer_optuna.evaluation import get_regression_scorer
+
+    with pytest.raises(ValueError, match="Unknown regression metric"):
+        get_regression_scorer("nope")

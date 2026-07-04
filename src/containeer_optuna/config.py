@@ -30,6 +30,19 @@ ModelType = Literal["regression", "clustering", "reducer", "scaler", "classifica
 # classification, hence it is accepted at the config layer already.
 TaskType = Literal["regression", "clustering", "classification"]
 
+# Pluggable regression optimization metrics (M1).
+# - r2: coefficient of determination (higher is better, maximize).
+# - mse / rmse / mae: error metrics (lower is better, minimize).
+RegressionMetric = Literal["r2", "mse", "rmse", "mae"]
+
+# Metric → optimization direction map (M1).
+METRIC_DIRECTION: dict[str, str] = {
+    "r2": "maximize",
+    "mse": "minimize",
+    "rmse": "minimize",
+    "mae": "minimize",
+}
+
 
 class CVConfig(BaseModel):
     """Cross-validation configuration.
@@ -100,6 +113,14 @@ class ExperimentConfig(BaseModel):
         random_state: Global seed for the experiment.
         scaler: Optional scaler name (``standard_scaler``, ``minmax_scaler``).
         reducer: Optional reducer name (``pca``, ``umap``).
+        metric: Regression optimization metric (M1). When set, drives the
+            objective scorer AND defaults ``optimization.direction``
+            (``r2``→maximize, others→minimize). None falls back to the
+            estimator's default scorer (R² for linear models).
+        feature_sets: Named feature subsets for feature-set selection (M1).
+            When set, the regression objective samples a feature-set name
+            categorically per trial and slices ``X`` to that subset. None
+            disables feature-set selection (use all columns).
     """
 
     name: str
@@ -114,13 +135,17 @@ class ExperimentConfig(BaseModel):
     random_state: int = 42
     scaler: str | None = None
     reducer: str | None = None
+    metric: RegressionMetric | None = None
+    feature_sets: dict[str, list[str]] | None = None
 
     @model_validator(mode="after")
     def _default_study_name(self) -> ExperimentConfig:
         """Default ``optimization.study_name`` to ``{name}_optuna`` when unset.
 
         Also defaults the CV strategy to ``kfold`` for clustering tasks when the
-        caller did not specify one explicitly.
+        caller did not specify one explicitly, and derives the optimization
+        direction from ``metric`` when the metric is set and direction was not
+        explicitly pinned.
         """
         if not self.optimization.study_name:
             self.optimization.study_name = f"{self.name}_optuna"
@@ -128,6 +153,14 @@ class ExperimentConfig(BaseModel):
             # Clustering has no target to stratify/shuffle on; KFold over rows
             # is the canonical stability-evaluation strategy.
             self.cv.strategy = "kfold"
+        # When a regression metric is set, it dictates the optimization
+        # direction (r2 → maximize; mse/rmse/mae → minimize). The metric is the
+        # single source of truth for direction; users who want to flip the sign
+        # should choose the matching metric instead.
+        if self.metric:
+            direction = METRIC_DIRECTION[self.metric]
+            assert direction in ("maximize", "minimize")
+            self.optimization.direction = direction  # type: ignore[assignment]
         return self
 
 
@@ -137,11 +170,16 @@ class DatasetConfig(BaseModel):
     Attributes:
         name: Registry key used by :func:`load_dataset_config`.
         path: Local file path (relative to ``Settings.data_dir``). Unused when
-            ``download`` is True.
+            ``source`` is ``"kaggle"`` or ``"sklearn"``.
         target_column: Regression/classification target column (None for clustering).
         feature_columns: Optional subset of feature columns to keep.
-        download: If True, fetch via ``kagglehub`` using ``kaggle_dataset``.
+        source: Where the data comes from — ``"local"`` (a file, default),
+            ``"kaggle"`` (Kaggle via ``kagglehub``), or ``"sklearn"`` (a bundled
+            sklearn dataset referenced by ``sklearn_name``).
+        download: If True (and ``source == "kaggle"``), fetch via ``kagglehub``.
         kaggle_dataset: Kaggle dataset handle (``owner/slug``).
+        sklearn_name: Bundled sklearn dataset name (e.g. ``"iris"``, ``"diabetes"``)
+            when ``source == "sklearn"``.
         preprocessing: Free-form preprocessing recipe. Recognized keys:
             ``sep``, ``na_values``, ``names``, ``header``, ``drop_columns``,
             ``numeric_conversion``, ``one_hot_encode``, ``dropna``.
@@ -151,8 +189,10 @@ class DatasetConfig(BaseModel):
     path: str | None = None
     target_column: str | None = None
     feature_columns: list[str] | None = None
+    source: Literal["local", "kaggle", "sklearn"] = "local"
     download: bool = False
     kaggle_dataset: str | None = None
+    sklearn_name: str | None = None
     preprocessing: dict[str, Any] = Field(default_factory=dict)
 
 

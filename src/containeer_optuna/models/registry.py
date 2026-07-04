@@ -173,6 +173,13 @@ def get_model(
     else:
         params = dict(config.default_params)
 
+    # Coerce the sentinel string "None" (used in categorical param_spaces to
+    # allow opting out of a parameter like max_depth) to Python None so the
+    # downstream sklearn constructor receives the value it expects.
+    for k, v in list(params.items()):
+        if v == "None":
+            params[k] = None
+
     params.update(overrides)
     return cls(**params)
 

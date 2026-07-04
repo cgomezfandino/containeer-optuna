@@ -17,6 +17,7 @@ from __future__ import annotations
 from typing import Any
 
 import numpy as np
+import pandas as pd
 
 from ..config import ExperimentConfig
 from ..data import get_dataset
@@ -117,8 +118,13 @@ class OptunaRunner:
 
     # -- data -------------------------------------------------------------
 
-    def load_data(self) -> tuple[np.ndarray, np.ndarray | None]:
-        """Load the dataset and return ``(X, y)`` (``y`` is None for clustering)."""
+    def load_data(self) -> tuple[np.ndarray | pd.DataFrame, np.ndarray | None]:
+        """Load the dataset and return ``(X, y)`` (``y`` is None for clustering).
+
+        When the experiment defines ``feature_sets``, ``X`` is kept as a pandas
+        DataFrame (so the objective can slice columns by name); otherwise it is
+        converted to a numpy array.
+        """
         dataset = get_dataset(self.config.dataset, base_dir=self.base_dir)
         loaded = dataset.load()
 
@@ -127,8 +133,13 @@ class OptunaRunner:
         else:
             X, y = loaded, None
 
-        # Optuna objectives work with numpy arrays; convert here once.
-        self.X = np.asarray(X)
+        # Preserve the DataFrame when feature-set selection is active so the
+        # objective can slice by column name; numpy arrays can't be sliced by
+        # feature-set names.
+        if self.config.feature_sets:
+            self.X = X  # keep DataFrame
+        else:
+            self.X = np.asarray(X)
         self.y = np.asarray(y) if y is not None else None
         return self.X, self.y
 

@@ -48,7 +48,17 @@ datasets:
       dropna: true
 
   - name: "iris"
-    download: false
+    source: "sklearn"
+    sklearn_name: "iris"
     target_column: null
+    feature_columns: null
+    preprocessing: {}
+
+  # M1 — bundled regression dataset (no download; ideal for CI and tutorials).
+  # 442 samples, 10 features, continuous target (disease progression).
+  - name: "diabetes"
+    source: "sklearn"
+    sklearn_name: "diabetes"
+    target_column: "target"
     feature_columns: null
     preprocessing: {}

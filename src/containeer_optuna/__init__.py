@@ -40,11 +40,13 @@ from .config import (
 )
 from .data import BaseDataset, YamlDatasetLoader, get_dataset
 from .evaluation import (
+    REGRESSION_SCORERS,
     ModelCard,
     all_model_cards,
     card_to_dict,
     clustering_metrics,
     get_model_card,
+    get_regression_scorer,
     regression_metrics,
 )
 from .models import MODEL_CLASSES, BaseModel, get_model, suggest_params
@@ -98,6 +100,8 @@ __all__ = [
     # evaluation
     "regression_metrics",
     "clustering_metrics",
+    "REGRESSION_SCORERS",
+    "get_regression_scorer",
     "ModelCard",
     "get_model_card",
     "all_model_cards",

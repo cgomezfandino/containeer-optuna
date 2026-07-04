@@ -140,12 +140,60 @@ def _resolve_kaggle_path(kaggle_dataset: str) -> tuple[Path, pd.DataFrame]:
     return dataset_path, pd.read_csv(csv_files[0])
 
 
+# Names of bundled sklearn loaders that return a regression/classification
+# target. Each maps to the sklearn ``load_*`` function.
+_SKLEARN_LOADERS = {
+    "iris": "load_iris",
+    "diabetes": "load_diabetes",
+    "wine": "load_wine",
+    "breast_cancer": "load_breast_cancer",
+}
+
+
+def _load_sklearn_dataset(name: str) -> pd.DataFrame:
+    """Load a bundled sklearn dataset as a DataFrame (features + target column).
+
+    Args:
+        name: sklearn dataset key — ``"iris"``, ``"diabetes"``, ``"wine"``,
+            or ``"breast_cancer"``.
+
+    Returns:
+        A DataFrame with all feature columns plus a ``"target"`` column. For
+        Iris the four feature columns are renamed to human-readable names.
+
+    Raises:
+        ValueError: If ``name`` is not a recognized bundled dataset.
+    """
+    import sklearn.datasets as sd
+
+    loader_name = _SKLEARN_LOADERS.get(name)
+    if loader_name is None:
+        raise ValueError(f"Unknown sklearn dataset '{name}'. Known: {sorted(_SKLEARN_LOADERS)}")
+    loader = getattr(sd, loader_name)
+    bunch = loader(as_frame=True)
+    df = bunch.frame.copy()
+    # Iris ships with integer feature names; rename for readability.
+    if name == "iris":
+        df.columns = [
+            "sepal_length",
+            "sepal_width",
+            "petal_length",
+            "petal_width",
+            "target",
+        ]
+    return df
+
+
 class YamlDatasetLoader(BaseDataset):
     """Concrete dataset loader driven by a :class:`DatasetConfig`.
 
-    Handles four cases: local files (e.g. Auto MPG), Kaggle downloads
-    (customer_personality, credit_card), the bundled Iris dataset (loaded via
-    sklearn when no path/URL is given), and any custom file path.
+    Handles three cases, dispatched on ``DatasetConfig.source``:
+
+    * ``"local"`` (default) — read a file (e.g. Auto MPG).
+    * ``"kaggle"`` — download via ``kagglehub`` (customer_personality, credit_card).
+    * ``"sklearn"`` — load a bundled sklearn dataset referenced by
+      ``sklearn_name`` (e.g. ``"iris"``, ``"diabetes"``). No download required,
+      which makes it ideal for CI and tutorials.
     """
 
     def load(
@@ -156,7 +204,8 @@ class YamlDatasetLoader(BaseDataset):
 
         Args:
             data_dir: Optional override for the data root directory. Defaults
-                to :attr:`~containeer_optuna.config.Settings.data_dir`.
+                to :attr:`~containeer_optuna.config.Settings.data_dir`. Only
+                used by the ``"local"`` source.
 
         Returns:
             ``X`` (DataFrame) for clustering datasets, or ``(X, y)`` for
@@ -165,28 +214,18 @@ class YamlDatasetLoader(BaseDataset):
         cfg = self.config
         preprocessing = cfg.preprocessing or {}
 
-        if cfg.download and cfg.kaggle_dataset:
-            _, df = _resolve_kaggle_path(cfg.kaggle_dataset)
-            # Kaggle files are plain CSV; honor ``sep`` if provided.
-            # (Re-read is unnecessary — we already loaded via pd.read_csv above.)
+        if cfg.source == "sklearn":
+            df = _load_sklearn_dataset(cfg.sklearn_name or cfg.name)
             df = _preprocess(df, preprocessing)
-        elif cfg.name == "iris" and not cfg.path:
-            # Bundled fallback: load Iris from sklearn (no download required).
-            from sklearn.datasets import load_iris
-
-            bunch = load_iris(as_frame=True)
-            df = bunch.frame
-            df.columns = [
-                "sepal_length",
-                "sepal_width",
-                "petal_length",
-                "petal_width",
-                "target",
-            ]
+        elif cfg.source == "kaggle" or (cfg.download and cfg.kaggle_dataset):
+            _, df = _resolve_kaggle_path(cfg.kaggle_dataset or "")
             df = _preprocess(df, preprocessing)
-        else:
+        else:  # "local"
             if not cfg.path:
-                raise ValueError(f"Dataset '{cfg.name}' has no path and is not a Kaggle download")
+                raise ValueError(
+                    f"Dataset '{cfg.name}' has source='local' but no path. "
+                    f"Set a path or use source='sklearn'/'kaggle'."
+                )
             base = Path(data_dir) if data_dir else Path(settings.data_dir)
             path = Path(cfg.path)
             if not path.is_absolute():
@@ -223,6 +262,8 @@ _DATASET_REGISTRY: dict[str, type] = {
     "customer_personality": YamlDatasetLoader,
     "credit_card": YamlDatasetLoader,
     "iris": YamlDatasetLoader,
+    # M1 — bundled regression dataset (no download, ideal for CI/tutorials)
+    "diabetes": YamlDatasetLoader,
 }
 
 
