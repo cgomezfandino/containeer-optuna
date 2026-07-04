@@ -56,7 +56,9 @@ def test_list_datasets():
 def test_list_experiments():
     result = runner.invoke(app, ["list-experiments"])
     assert result.exit_code == 0
-    assert "clustering_optimization" in result.stdout
+    # Names may be truncated by Rich tables; check for a known prefix and task.
+    assert "clustering" in result.stdout
+    assert "classification" in result.stdout
 
 
 def test_init_creates_yaml(tmp_path: Path):

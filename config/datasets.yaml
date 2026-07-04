@@ -62,3 +62,28 @@ datasets:
     target_column: "target"
     feature_columns: null
     preprocessing: {}
+
+  # M4 — bundled classification datasets (no download; ideal for CI/tutorials).
+  # breast_cancer: 569 samples, 30 features, binary target (0=malignant, 1=benign).
+  - name: "breast_cancer"
+    source: "sklearn"
+    sklearn_name: "breast_cancer"
+    target_column: "target"
+    feature_columns: null
+    preprocessing: {}
+
+  # wine: 178 samples, 13 features, 3-class target (cultivars).
+  - name: "wine"
+    source: "sklearn"
+    sklearn_name: "wine"
+    target_column: "target"
+    feature_columns: null
+    preprocessing: {}
+
+  # iris_classification: iris configured for supervised classification (3-class).
+  - name: "iris_classification"
+    source: "sklearn"
+    sklearn_name: "iris"
+    target_column: "target"
+    feature_columns: null
+    preprocessing: {}

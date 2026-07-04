@@ -72,6 +72,44 @@ def get_regression_scorer(metric: str) -> tuple[object, str]:
     return get_scorer(scorer_name), direction
 
 
+# --- Pluggable classification scorers (M4) ------------------------------
+#
+# All classification metrics are higher-is-better (maximize). Binary metrics
+# (f1, roc_auc) assume 0/1-encoded targets with pos_label=1; use f1_weighted
+# and roc_auc_ovr for multiclass.
+CLASSIFICATION_SCORERS: dict[str, tuple[str, str]] = {
+    "accuracy": ("accuracy", "maximize"),
+    "f1": ("f1", "maximize"),
+    "f1_weighted": ("f1_weighted", "maximize"),
+    "roc_auc": ("roc_auc", "maximize"),
+    "roc_auc_ovr": ("roc_auc_ovr", "maximize"),
+}
+
+
+def get_classification_scorer(metric: str) -> tuple[object, str]:
+    """Return ``(scorer, direction)`` for a classification metric name.
+
+    Args:
+        metric: One of ``"accuracy"``, ``"f1"``, ``"f1_weighted"``,
+            ``"roc_auc"``, ``"roc_auc_ovr"``. Binary metrics (``f1``,
+            ``roc_auc``) require 0/1 targets; use the ``*_weighted`` / ``*_ovr``
+            variants for multiclass.
+
+    Returns:
+        A tuple ``(scorer, direction)``. Direction is always ``"maximize"``.
+
+    Raises:
+        ValueError: If ``metric`` is not a recognized classification metric.
+    """
+    if metric not in CLASSIFICATION_SCORERS:
+        raise ValueError(
+            f"Unknown classification metric '{metric}'. "
+            f"Known metrics: {sorted(CLASSIFICATION_SCORERS)}"
+        )
+    scorer_name, direction = CLASSIFICATION_SCORERS[metric]
+    return get_scorer(scorer_name), direction
+
+
 def regression_metrics(y_true: ArrayLike, y_pred: ArrayLike) -> dict[str, float]:
     """Compute standard regression metrics.
 
@@ -130,6 +168,8 @@ def clustering_metrics(X: ArrayLike, labels: ArrayLike) -> dict[str, float]:
 __all__ = [
     "REGRESSION_SCORERS",
     "get_regression_scorer",
+    "CLASSIFICATION_SCORERS",
+    "get_classification_scorer",
     "regression_metrics",
     "clustering_metrics",
 ]

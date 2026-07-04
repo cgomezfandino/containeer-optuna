@@ -23,6 +23,7 @@ from ..config import ExperimentConfig
 from ..data import get_dataset
 from ..utils import get_logger, seed_all, study_summary
 from .objectives import (
+    make_classification_objective,
     make_clustering_objective,
     make_model_selection_objective,
     make_regression_objective,
@@ -175,8 +176,8 @@ class OptunaRunner:
         """Select and build the right objective for the task.
 
         When ``config.models`` is set (non-empty), dispatch to the
-        model-selection objective regardless of task (it handles both
-        regression and clustering internally). Otherwise, use the
+        model-selection objective regardless of task (it handles regression,
+        classification, and clustering internally). Otherwise, use the
         single-model objective for the task.
         """
         if self.X is None:
@@ -186,13 +187,16 @@ class OptunaRunner:
 
         # Model-selection mode (M2): search across model families.
         if self.config.models:
-            if self.config.task == "regression":
-                assert self.y is not None, "regression task requires a target column"
+            if self.config.task in ("regression", "classification"):
+                assert self.y is not None, f"{self.config.task} task requires a target column"
             return make_model_selection_objective(self.config, self.X, self.y)
 
         if self.config.task == "regression":
             assert self.y is not None, "regression task requires a target column"
             return make_regression_objective(self.config, self.X, self.y)
+        if self.config.task == "classification":
+            assert self.y is not None, "classification task requires a target column"
+            return make_classification_objective(self.config, self.X, self.y)
         if self.config.task == "clustering":
             return make_clustering_objective(self.config, self.X)
         raise ValueError(f"Unsupported task: {self.config.task}")

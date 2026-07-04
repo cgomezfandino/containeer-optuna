@@ -1,0 +1,28 @@
+name: classification_model_selection
+task: classification
+dataset: breast_cancer
+model: logistic_regression    # fallback / default
+models:                       # M4 — search across classifier families
+  - logistic_regression
+  - knn
+  - svc
+  - decision_tree_classifier
+metric: accuracy
+scaler: standard_scaler
+reducer: null
+random_state: 42
+
+cv:
+  strategy: stratified_kfold
+  n_splits: 5
+  random_state: 42
+
+optimization:
+  enabled: true
+  n_trials: 60
+  direction: maximize
+  study_name: classification_model_selection
+  storage: sqlite:///optuna_studies.db
+  load_if_exists: true
+  sampler: tpe
+  pruner: null

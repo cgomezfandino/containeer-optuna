@@ -26,7 +26,7 @@ Cluster stability metric.
 t-SNE (real perplexity — the original `perplexity.ipynb` is misnamed; it uses
 UMAP, not t-SNE). TruncatedSVD, FactorAnalysis. Visualization utilities.
 
-## M4 — Classification (planned)
+## M4 — Classification ✅ (current release)
 
 New task type. LogReg / KNN / SVC / trees. Accuracy, F1, AUC. StratifiedKFold.
 

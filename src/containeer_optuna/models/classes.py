@@ -18,12 +18,13 @@ from sklearn.cluster import (
 )
 from sklearn.decomposition import PCA, FactorAnalysis, TruncatedSVD
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
-from sklearn.linear_model import ElasticNet, Lasso, LinearRegression, Ridge
+from sklearn.linear_model import ElasticNet, Lasso, LinearRegression, LogisticRegression, Ridge
 from sklearn.manifold import TSNE
 from sklearn.mixture import GaussianMixture
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
-from sklearn.svm import SVR
-from sklearn.tree import DecisionTreeRegressor
+from sklearn.svm import SVC, SVR
+from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 
 # Regression estimators ---------------------------------------------------
 REGRESSION_MODELS: dict[str, type] = {
@@ -36,6 +37,14 @@ REGRESSION_MODELS: dict[str, type] = {
     "random_forest": RandomForestRegressor,
     "gradient_boosting": GradientBoostingRegressor,
     "svr": SVR,
+}
+
+# Classification estimators (M4) -----------------------------------------
+CLASSIFICATION_MODELS: dict[str, type] = {
+    "logistic_regression": LogisticRegression,
+    "knn": KNeighborsClassifier,
+    "svc": SVC,
+    "decision_tree_classifier": DecisionTreeClassifier,
 }
 
 # Clustering estimators ---------------------------------------------------
@@ -98,6 +107,7 @@ except ImportError:  # pragma: no cover
 # above when umap-learn is available; otherwise None).
 MODEL_CLASSES: dict[str, type | None] = {
     **REGRESSION_MODELS,
+    **CLASSIFICATION_MODELS,
     **CLUSTERING_MODELS,
     **REDUCER_MODELS,
     **SCALER_MODELS,
@@ -106,6 +116,7 @@ MODEL_CLASSES: dict[str, type | None] = {
 
 __all__ = [
     "REGRESSION_MODELS",
+    "CLASSIFICATION_MODELS",
     "CLUSTERING_MODELS",
     "REDUCER_MODELS",
     "SCALER_MODELS",

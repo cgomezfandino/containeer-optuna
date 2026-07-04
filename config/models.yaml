@@ -148,6 +148,87 @@ models:
         type: "categorical"
         choices: ["rbf", "linear", "poly"]
 
+  # --- M4: Classification ------------------------------------------------
+
+  - name: "logistic_regression"
+    type: "classification"
+    default_params:
+      C: 1.0
+      penalty: "l2"
+      solver: "lbfgs"
+      max_iter: 5000
+      random_state: 42
+    param_space:
+      C:
+        type: "float"
+        low: 0.01
+        high: 100.0
+        log: true
+      penalty:
+        type: "categorical"
+        choices: ["l2", "l1"]
+      solver:
+        type: "categorical"
+        choices: ["lbfgs", "saga", "liblinear"]
+
+  - name: "knn"
+    type: "classification"
+    default_params:
+      n_neighbors: 5
+      weights: "uniform"
+      p: 2
+    param_space:
+      n_neighbors:
+        type: "int"
+        low: 1
+        high: 30
+      weights:
+        type: "categorical"
+        choices: ["uniform", "distance"]
+      p:
+        type: "categorical"
+        choices: [1, 2]
+
+  - name: "svc"
+    type: "classification"
+    default_params:
+      C: 1.0
+      kernel: "rbf"
+      gamma: "scale"
+      probability: true
+      random_state: 42
+    param_space:
+      C:
+        type: "float"
+        low: 0.01
+        high: 1000.0
+        log: true
+      kernel:
+        type: "categorical"
+        choices: ["rbf", "linear", "poly"]
+      gamma:
+        type: "categorical"
+        choices: ["scale", "auto"]
+
+  - name: "decision_tree_classifier"
+    type: "classification"
+    default_params:
+      max_depth: null
+      min_samples_split: 2
+      criterion: "gini"
+      random_state: 42
+    param_space:
+      max_depth:
+        type: "categorical"
+        choices: ["None", 5, 10, 20, 30]
+      min_samples_split:
+        type: "int"
+        low: 2
+        high: 20
+      criterion:
+        type: "categorical"
+        choices: ["gini", "entropy"]
+
   - name: "kmeans"
     type: "clustering"
     default_params:
