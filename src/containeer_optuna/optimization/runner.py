@@ -170,10 +170,25 @@ class OptunaRunner:
         return sampler_cls(**kwargs)
 
     def _build_pruner(self) -> Any:
-        """Construct the Optuna pruner from the config (NopPruner if None)."""
+        """Construct the Optuna pruner from the config.
+
+        When no pruner is specified (None) and the model is a DL or NLP model,
+        default to ``HyperbandPruner`` — epoch pruning is the main value of
+        Optuna for neural networks, so silently disabling it (NopPruner) is a
+        poor default for expensive training loops. For sklearn models the
+        default remains ``NopPruner`` (no intermediate values to prune on).
+        """
         opt_cfg = self.config.optimization
         kind = opt_cfg.pruner
         if not kind:
+            # Auto-default: Hyperband for DL/NLP (epoch pruning), NopPruner for sklearn.
+            if self.config.model in _DL_MODELS or self.config.model in _NLP_MODELS:
+                self.logger.info(
+                    "No pruner specified for DL/NLP model '%s'; defaulting to HyperbandPruner "
+                    "(set pruner: null explicitly to disable).",
+                    self.config.model,
+                )
+                return _PRUNERS["hyperband"]()
             return NopPruner()
         return _PRUNERS[kind]()
 

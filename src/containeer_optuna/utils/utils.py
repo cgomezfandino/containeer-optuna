@@ -146,6 +146,56 @@ def save_model(
     return path
 
 
+def save_model_onnx(
+    model: Any,
+    experiment_name: str,
+    n_features: int,
+    task: str = "regression",
+    base: str | Path | None = None,
+) -> Path:
+    """Export a fitted sklearn Pipeline/estimator to ONNX format.
+
+    Requires ``pip install containeer-optuna[onnx]`` (skl2onnx + onnx).
+
+    Args:
+        model: A fitted sklearn Pipeline or estimator.
+        experiment_name: Used in the output filename.
+        n_features: Number of input features (needed to define the ONNX input shape).
+        task: ``"regression"``, ``"classification"``, or ``"clustering"``. Determines
+            the ONNX output type.
+        base: Optional override for the results directory.
+
+    Returns:
+        The path to the saved ``.onnx`` file.
+
+    Raises:
+        ImportError: If ``skl2onnx`` is not installed.
+    """
+    try:
+        from skl2onnx import to_onnx
+    except ImportError as e:
+        raise ImportError(
+            "skl2onnx is required for ONNX export. "
+            "Install it with: pip install containeer-optuna[onnx]"
+        ) from e
+
+    base_dir = results_dir(base)
+    path = base_dir / f"{experiment_name}_best_model.onnx"
+
+    import numpy as np
+
+    # Determine options from task.
+    if task == "classification":
+        options = {id(model): {"zipmap": False}}
+    else:
+        options = None
+
+    onnx_model = to_onnx(model, np.zeros((1, n_features), dtype=np.float32), options=options)
+    with open(path, "wb") as f:
+        f.write(onnx_model.SerializeToString())
+    return path
+
+
 def study_summary(study: Any) -> dict[str, Any]:
     """Return a JSON-serializable summary dict of an Optuna study.
 

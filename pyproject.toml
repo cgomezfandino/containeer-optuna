@@ -80,6 +80,10 @@ nlp = [
 mlflow = [
     "mlflow>=2.0.0",
 ]
+onnx = [
+    "skl2onnx>=1.16.0",
+    "onnx>=1.14.0",
+]
 
 [project.scripts]
 containeer-optuna = "containeer_optuna.cli:app"

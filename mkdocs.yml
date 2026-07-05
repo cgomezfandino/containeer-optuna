@@ -1,6 +1,6 @@
 site_name: containeer-optuna
 site_description: An Optuna-first data science framework for ML, DL, AI, and statistics.
-site_url: https://github.com/cgomezfandino/containeer-optuna
+site_url: https://cgomezfandino.github.io/containeer-optuna/
 repo_url: https://github.com/cgomezfandino/containeer-optuna
 repo_name: cgomezfandino/containeer-optuna
 edit_uri: edit/main/docs/
