@@ -11,6 +11,7 @@ from .utils import (
     results_dir,
     save_json,
     save_model,
+    save_model_onnx,
     save_predictions,
     seed_all,
     study_summary,
@@ -24,5 +25,6 @@ __all__ = [
     "save_json",
     "save_predictions",
     "save_model",
+    "save_model_onnx",
     "study_summary",
 ]
